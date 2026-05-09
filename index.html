@@ -1,0 +1,1953 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nebuliga Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f0f1a;
+    --card: #1a1a2e;
+    --card2: #16213e;
+    --border: #2a2a4a;
+    --accent1: #4f8ef7;
+    --accent2: #f7a14f;
+    --text: #e8e8f0;
+    --text2: #8888aa;
+    --success: #4fdb8b;
+    --danger: #f74f6a;
+    --warn: #f7d94f;
+    --radius: 10px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; overflow-x: hidden; }
+
+  /* ── Layout ── */
+  #app { display: flex; min-height: 100vh; }
+  #sidebar { width: 220px; background: var(--card); border-right: 1px solid var(--border); padding: 20px 0; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+  #main { flex: 1; padding: 28px 32px; overflow-x: hidden; }
+
+  /* ── Sidebar ── */
+  .sidebar-title { padding: 0 20px 20px; font-size: 18px; font-weight: 700; color: var(--accent1); letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+  .sidebar-title span { display: block; font-size: 11px; color: var(--text2); font-weight: 400; margin-top: 3px; }
+  .nav-section { padding: 14px 0 4px 20px; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text2); }
+  .nav-btn { display: block; width: 100%; padding: 9px 20px; text-align: left; background: none; border: none; color: var(--text2); cursor: pointer; font-size: 13px; transition: all 0.15s; border-left: 3px solid transparent; }
+  .nav-btn:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  .nav-btn.active { color: var(--text); border-left-color: var(--accent1); background: rgba(79,142,247,0.08); font-weight: 600; }
+  .nav-btn.liga2.active { border-left-color: var(--accent2); background: rgba(247,161,79,0.08); }
+
+  /* ── Upload Section ── */
+  #upload-zone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 40px; text-align: center; transition: border-color 0.2s; cursor: pointer; margin-bottom: 24px; }
+  #upload-zone:hover, #upload-zone.drag { border-color: var(--accent1); background: rgba(79,142,247,0.05); }
+  #upload-zone .upload-icon { font-size: 40px; margin-bottom: 12px; }
+  #upload-zone h3 { font-size: 16px; margin-bottom: 8px; }
+  #upload-zone p { color: var(--text2); font-size: 13px; }
+  #file-input { display: none; }
+  .btn { padding: 10px 22px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; }
+  .btn-primary { background: var(--accent1); color: #fff; }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-sm { padding: 6px 14px; font-size: 12px; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  #upload-btn { margin-top: 16px; }
+
+  /* ── Status / Log ── */
+  #file-list { list-style: none; margin-bottom: 20px; }
+  #file-list li { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--card2); border-radius: 6px; margin-bottom: 6px; font-size: 12px; }
+  #file-list li .fstatus { margin-left: auto; font-size: 11px; padding: 2px 8px; border-radius: 20px; }
+  .ok { background: rgba(79,219,139,0.15); color: var(--success); }
+  .err { background: rgba(247,79,106,0.15); color: var(--danger); }
+  .warn2 { background: rgba(247,217,79,0.15); color: var(--warn); }
+  #stats-bar { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  .stat-pill { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 18px; font-size: 13px; }
+  .stat-pill strong { color: var(--accent1); font-size: 18px; display: block; }
+  #calc-btn { margin-top: 8px; }
+
+  /* ── Config banner ── */
+  #config-banner { background: rgba(247,217,79,0.08); border: 1px solid rgba(247,217,79,0.25); border-radius: 8px; padding: 10px 16px; margin-bottom: 18px; font-size: 12px; color: var(--warn); display: none; }
+
+  /* ── Page sections ── */
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-title { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .page-sub { color: var(--text2); font-size: 13px; margin-bottom: 24px; }
+
+  /* ── Stat grid ── */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
+  .stat-grid.wide { grid-template-columns: 1fr; }
+  .stat-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+
+  /* ── Card ── */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .card-header { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .card-header h3 { font-size: 14px; font-weight: 600; }
+  .card-header .badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; background: rgba(79,142,247,0.15); color: var(--accent1); }
+  .card-body { padding: 0; }
+
+  /* ── Tables ── */
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: rgba(255,255,255,0.03); }
+  thead th { padding: 9px 14px; text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text2); font-weight: 600; }
+  thead th.left { text-align: left; }
+  tbody tr { border-top: 1px solid rgba(255,255,255,0.04); transition: background 0.1s; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  tbody td { padding: 9px 14px; font-size: 13px; text-align: center; }
+  tbody td.left { text-align: left; }
+  .rank { color: var(--text2); font-size: 12px; width: 28px; }
+  .rank.gold { color: #ffd700; font-weight: 700; }
+  .rank.silver { color: #c0c0c0; font-weight: 700; }
+  .rank.bronze { color: #cd7f32; font-weight: 700; }
+  .pos-badge { display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 10px; font-weight: 600; margin-left: 6px; }
+  .pos-F { background: rgba(79,142,247,0.2); color: var(--accent1); }
+  .pos-M { background: rgba(79,219,139,0.2); color: var(--success); }
+  .pos-A { background: rgba(247,79,106,0.2); color: var(--danger); }
+  .pos-P { background: rgba(247,217,79,0.2); color: var(--warn); }
+  .pts-cell { font-weight: 700; color: var(--text); }
+  .pts-pos { color: var(--success); }
+  .pts-neg { color: var(--danger); }
+  .pts-zero { color: var(--text2); }
+  .avg-cell { font-size: 12px; color: var(--text2); }
+  .team-abbrev { font-size: 11px; color: var(--text2); }
+  .right { text-align: right !important; }
+
+  /* ── Team logos & owner photos ── */
+  .team-logo-sm { width: 22px; height: 22px; border-radius: 3px; object-fit: contain; vertical-align: middle; margin-right: 5px; background: rgba(255,255,255,0.04); flex-shrink: 0; }
+  .team-logo { width: 28px; height: 28px; border-radius: 4px; object-fit: contain; vertical-align: middle; margin-right: 6px; background: rgba(255,255,255,0.04); flex-shrink: 0; }
+  .owner-photo { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 6px; flex-shrink: 0; }
+  .cell-with-img { display: flex; align-items: center; }
+
+  /* ── Club name abbrev unknown ── */
+  .abbrev-unknown { font-style: italic; opacity: 0.7; }
+  .abbrev-warn { color: var(--warn); }
+
+  /* ── Chart container ── */
+  .chart-wrap { position: relative; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 24px; }
+  .chart-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+  .chart-wrap canvas { height: 380px; width: 100%; }
+
+  /* ── Time Slider ── */
+  .slider-wrap { display: flex; align-items: center; gap: 14px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 18px; margin-bottom: 16px; }
+  .slider-wrap label { font-size: 12px; color: var(--text2); white-space: nowrap; }
+  .slider-wrap input[type=range] { flex: 1; accent-color: var(--accent1); cursor: pointer; }
+  .slider-etapa-badge { font-size: 14px; font-weight: 700; color: var(--accent1); min-width: 64px; white-space: nowrap; }
+
+  /* ── Echipe page ── */
+  .echipa-selector { margin-bottom: 20px; }
+  .echipa-selector label { font-size: 12px; color: var(--text2); margin-bottom: 6px; display: block; }
+  .echipa-selector select { background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 10px 16px; font-size: 14px; cursor: pointer; min-width: 280px; }
+  .echipa-selector select:focus { outline: none; border-color: var(--accent1); }
+  .echipa-hero { display: flex; gap: 24px; padding: 24px; align-items: flex-start; flex-wrap: wrap; }
+  .echipa-hero-logo { flex-shrink: 0; }
+  .team-logo-xl { width: 100px; height: 100px; object-fit: contain; border-radius: 12px; background: rgba(255,255,255,0.04); padding: 8px; }
+  .placeholder-logo { width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 40px; background: rgba(255,255,255,0.04); border-radius: 12px; }
+  .echipa-hero-info { flex: 1; min-width: 200px; }
+  .echipa-hero-name { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .echipa-hero-owner { display: flex; align-items: center; gap: 8px; color: var(--text2); font-size: 13px; margin-bottom: 18px; }
+  .echipa-stats-row { display: flex; flex-wrap: wrap; gap: 10px; }
+  .echipa-stat { background: var(--card2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; min-width: 120px; }
+  .echipa-stat-label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text2); margin-bottom: 4px; }
+  .echipa-stat-val { display: block; font-size: 16px; font-weight: 700; }
+
+  /* ── Coef table ── */
+  .coef-bar { height: 6px; border-radius: 3px; background: var(--border); margin-top: 4px; }
+  .coef-bar-fill { height: 100%; border-radius: 3px; }
+  .coef-pos-fill { background: var(--success); }
+  .coef-neg-fill { background: var(--danger); }
+
+  /* ── Empty state ── */
+  .empty-state { padding: 40px; text-align: center; color: var(--text2); }
+  .empty-state .icon { font-size: 36px; margin-bottom: 12px; }
+
+  /* ── Errors ── */
+  #error-log { background: rgba(247,79,106,0.08); border: 1px solid rgba(247,79,106,0.2); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; display: none; }
+  #error-log h4 { color: var(--danger); font-size: 13px; margin-bottom: 6px; }
+  #error-log ul { font-size: 12px; color: var(--text2); padding-left: 16px; }
+
+  /* ── Postponed matches alert ── */
+  #postponed-log { background: rgba(247,217,79,0.06); border: 1px solid rgba(247,217,79,0.3); border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; display: none; font-size: 12px; }
+  .postponed-header { color: var(--warn); font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+  .postponed-bloc { margin-bottom: 10px; padding: 8px 12px; background: rgba(247,217,79,0.04); border-left: 2px solid var(--warn); border-radius: 0 6px 6px 0; }
+  .postponed-match { font-weight: 600; color: var(--text); margin-bottom: 4px; font-size: 12px; }
+  .postponed-entry { color: var(--text2); padding: 2px 0 2px 10px; }
+  .postponed-entry strong { color: var(--text); }
+  .postponed-entry code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 3px; color: var(--warn); font-family: monospace; }
+  .postponed-footer { color: var(--text2); font-style: italic; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(247,217,79,0.15); }
+  .player-postponed { font-style: italic; opacity: 0.8; cursor: help; }
+
+  /* ── Standings row highlights ── */
+  tbody tr.row-top5 { background: rgba(79,219,139,0.06) !important; }
+  tbody tr.row-promotion { background: rgba(79,219,139,0.10) !important; }
+  tbody tr.row-relegation { background: rgba(247,79,106,0.06) !important; }
+  tbody tr.row-top5 .rank, tbody tr.row-promotion .rank { color: var(--success) !important; font-weight: 700; }
+  tbody tr.row-relegation .rank { color: var(--danger) !important; font-weight: 700; }
+
+  /* ── Position selector (Golgheteri Posturi) ── */
+  .pos-selector { display: flex; gap: 8px; margin-bottom: 16px; }
+  .pos-btn { padding: 8px 20px; border-radius: 8px; border: 1px solid var(--border); background: var(--card2); color: var(--text2); cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.15s; }
+  .pos-btn:hover { color: var(--text); border-color: var(--accent1); }
+  .pos-btn.active { background: rgba(79,142,247,0.15); color: var(--accent1); border-color: var(--accent1); }
+
+  /* ── Responsive ── */
+  @media (max-width: 1100px) { .stat-grid.three { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 900px) { .stat-grid { grid-template-columns: 1fr; } #sidebar { width: 180px; } }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .scroll-table { overflow-x: auto; }
+
+  /* ════════════════════════════════════════════════════
+     RESPONSIVE — TABLET (768px–1023px)
+     ════════════════════════════════════════════════════ */
+  @media (min-width: 768px) and (max-width: 1023px) {
+    #sidebar { width: 180px; }
+    #main { padding: 20px 24px; }
+
+    /* Echipe selector: full-width tabletă */
+    .echipa-selector select { min-width: 240px; }
+
+    /* Hero echipă: logo mai mic pe tabletă */
+    .team-logo-xl { width: 72px; height: 72px; }
+    .placeholder-logo { width: 72px; height: 72px; font-size: 32px; }
+    .echipa-hero-name { font-size: 20px; }
+  }
+
+  /* ════════════════════════════════════════════════════
+     RESPONSIVE — MOBILE (≤767px)
+     ════════════════════════════════════════════════════ */
+  @media (max-width: 767px) {
+
+    /* ── Layout: sidebar devine header orizontal ── */
+    #app { flex-direction: column; }
+
+    #sidebar {
+      width: 100%;
+      height: auto;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      padding: 0;
+      flex-direction: column;
+      /* depășeste height: 100vh din desktop */
+    }
+
+    /* Titlul rămâne fix deasupra, nu scrollează */
+    .sidebar-title {
+      padding: 8px 16px;
+      font-size: 16px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      letter-spacing: 0;
+    }
+
+    .sidebar-title span { display: none; }
+
+    /* Butoanele — rând orizontal cu scroll */
+    .nav-scroll {
+      display: flex;
+      flex-direction: row;
+      align-items: stretch;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      white-space: nowrap;
+      padding: 0 4px;
+      gap: 0;
+      scrollbar-width: none;
+    }
+
+    .nav-scroll::-webkit-scrollbar { display: none; }
+
+    .nav-section {
+      display: inline-flex;
+      align-items: center;
+      padding: 0 6px 0 10px;
+      font-size: 9px;
+      letter-spacing: 1px;
+      flex-shrink: 0;
+    }
+
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      width: auto;
+      min-height: 44px;
+      padding: 6px 10px;
+      font-size: 12px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      /* înlocuiește border-left cu border-bottom */
+      border-left: none;
+      border-bottom: 3px solid transparent;
+      border-radius: 0;
+    }
+
+    .nav-btn.active {
+      border-left-color: transparent;
+      border-bottom-color: var(--accent1);
+      background: rgba(79,142,247,0.08);
+    }
+
+    .nav-btn.liga2.active {
+      border-bottom-color: var(--accent2);
+      background: rgba(247,161,79,0.08);
+    }
+
+    /* ── Main: padding redus ── */
+    #main { padding: 12px; }
+
+    /* ── Upload zone ── */
+    #upload-zone {
+      padding: 24px 16px;
+    }
+
+    #upload-zone h3 { font-size: 15px; }
+
+    #upload-zone p {
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* Buton upload: lățime 100%, height min 48px */
+    #upload-btn,
+    #calc-btn {
+      width: 100%;
+      min-height: 48px;
+      font-size: 15px;
+      margin-top: 12px;
+    }
+
+    /* Buton Reset: lățime 100%, stacked sub Calculează */
+    .btn-danger.btn-sm {
+      width: 100%;
+      min-height: 44px;
+      font-size: 14px;
+      margin-left: 0 !important;
+      margin-top: 8px;
+      display: block;
+    }
+
+    /* Lista fișierelor: verticală, font mai mic */
+    #file-list li {
+      flex-wrap: wrap;
+      font-size: 12px;
+      gap: 4px;
+    }
+
+    #file-list li .fstatus {
+      font-size: 10px;
+    }
+
+    /* Stats bar: wrap în 2 coloane pe mobile */
+    #stats-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .stat-pill {
+      padding: 8px 12px;
+      font-size: 12px;
+    }
+
+    .stat-pill strong {
+      font-size: 16px;
+    }
+
+    /* Mesaje eroare/validare */
+    #error-log { font-size: 13px; }
+    #error-log ul { font-size: 12px; }
+    #postponed-log { font-size: 12px; }
+    .postponed-header { font-size: 12px; }
+    .postponed-entry { font-size: 11px; }
+
+    /* Config banner */
+    #config-banner { font-size: 12px; }
+
+    /* ── Time Slider ── */
+    .slider-wrap {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 6px;
+      padding: 10px 14px;
+    }
+
+    /* Ascunde label-ul verbose — badge-ul rămâne vizibil */
+    .slider-wrap label { display: none; }
+
+    .slider-etapa-badge {
+      font-size: 14px;
+      text-align: center;
+      min-width: unset;
+      width: 100%;
+    }
+
+    /* Track mai înalt, thumb mai mare — ușor de atins */
+    .slider-wrap input[type=range] {
+      width: 100%;
+      height: 6px;
+    }
+
+    .slider-wrap input[type=range]::-webkit-slider-runnable-track {
+      height: 6px;
+    }
+
+    .slider-wrap input[type=range]::-moz-range-track {
+      height: 6px;
+    }
+
+    .slider-wrap input[type=range]::-webkit-slider-thumb {
+      width: 24px;
+      height: 24px;
+    }
+
+    .slider-wrap input[type=range]::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+    }
+
+    /* ── Tabel Clasament: ascunde coloanele secundare ── */
+    /* Coloane vizibile pe mobile: # | Echipă | Gol. | Pct
+       Coloane ascunse:  Proprietar (3) | J(4) | V(5) | E(6) | Î(7)  */
+    [id^="standings-table-l"] th:nth-child(3),
+    [id^="standings-table-l"] td:nth-child(3),
+    [id^="standings-table-l"] th:nth-child(4),
+    [id^="standings-table-l"] td:nth-child(4),
+    [id^="standings-table-l"] th:nth-child(5),
+    [id^="standings-table-l"] td:nth-child(5),
+    [id^="standings-table-l"] th:nth-child(6),
+    [id^="standings-table-l"] td:nth-child(6),
+    [id^="standings-table-l"] th:nth-child(7),
+    [id^="standings-table-l"] td:nth-child(7) {
+      display: none;
+    }
+
+    /* Nume echipă: truncat cu ellipsis dacă e prea lung */
+    [id^="standings-table-l"] .cell-with-img {
+      max-width: 130px;
+      overflow: hidden;
+    }
+
+    [id^="standings-table-l"] .cell-with-img strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
+      max-width: 100px;
+    }
+
+    /* Logo în clasament: max 24px (sub 28px cum cere spec) */
+    [id^="standings-table-l"] .team-logo-sm {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    /* Legendă clasament: stacked vertical pe mobile */
+    [id^="standings-table-l"] ~ * div[style*="display:flex"][style*="gap:16px"] {
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    /* ── Tipografie și spațiere generală ── */
+
+    /* Body: line-height mai generos pe mobile */
+    body { font-size: 14px; line-height: 1.5; }
+
+    /* Card header: padding redus, h3 mai mic */
+    .card-header { padding: 10px 14px; gap: 8px; flex-wrap: wrap; }
+    .card-header h3 { font-size: 13px; }
+    .card-header .badge { font-size: 9px; padding: 2px 6px; }
+
+    /* Tabel: celule mai strânse */
+    thead th { padding: 7px 10px; font-size: 10px; letter-spacing: 0.5px; }
+    tbody td { padding: 7px 10px; font-size: 12px; }
+    .rank { width: 22px; font-size: 11px; }
+
+    /* Pagina Echipe — hero în coloană pe mobile */
+    .echipa-hero { flex-direction: column; gap: 16px; padding: 16px; }
+    .echipa-hero-name { font-size: 18px; }
+    .echipa-hero-owner { font-size: 12px; }
+    .echipa-stats-row { gap: 8px; }
+    .echipa-stat { min-width: 0; flex: 1 1 100px; padding: 8px 10px; }
+    .echipa-stat-label { font-size: 9px; }
+    .echipa-stat-val { font-size: 14px; }
+
+    /* Dropdown selector echipe: full-width pe mobile */
+    .echipa-selector select { min-width: unset; width: 100%; font-size: 15px; }
+
+    /* Position selector (Golgheteri Poziții): full-width, flex wrap */
+    .pos-selector { flex-wrap: wrap; gap: 6px; }
+    .pos-btn { flex: 1 1 auto; padding: 10px 12px; font-size: 12px; text-align: center; min-height: 44px; }
+
+    /* Empty state: padding redus */
+    .empty-state { padding: 24px 16px; }
+    .empty-state .icon { font-size: 28px; }
+
+    /* ── Logo-uri și imagini ── */
+
+    /* Logo echipă în statistici (28px desktop → 22px mobile) */
+    .team-logo { width: 22px; height: 22px; margin-right: 4px; }
+
+    /* Logo XL în pagina echipe (100px → 60px) */
+    .team-logo-xl { width: 60px; height: 60px; padding: 6px; border-radius: 8px; }
+
+    /* Placeholder logo echipe — proporțional */
+    .placeholder-logo { font-size: 28px; }
+
+    /* Poza proprietar: ascunsă în clasament (col 3 deja ascunsă) și minimizată în alte tabele */
+    .owner-photo { width: 22px; height: 22px; margin-right: 4px; }
+
+    /* ── Tabele statistici: column hiding ── */
+
+    /* Golgheter Ligii + Golgheter Poziții: ascunde coloana 3 (Echipă reală) */
+    [id$="-golgheter-content"] table th:nth-child(3),
+    [id$="-golgheter-content"] table td:nth-child(3),
+    [id$="-pozitii-content"] table th:nth-child(3),
+    [id$="-pozitii-content"] table td:nth-child(3) { display: none; }
+
+    /* Portari: ascunde coloana 5 (Et. tit. / Etape) — Gol. prim. + Medie rămân */
+    [id$="-portari-content"] table th:nth-child(5),
+    [id$="-portari-content"] table td:nth-child(5) { display: none; }
+
+    /* Coeficient Inspirație: ascunde coloana 3 (Proprietar) */
+    [id$="-inspiratie-content"] table th:nth-child(3),
+    [id$="-inspiratie-content"] table td:nth-child(3) { display: none; }
+
+    /* Rezerva de Plâns: ascunde coloana 3 (Echipă reală) și coloana 6 (Apariții) */
+    [id$="-rezerve-content"] table th:nth-child(3),
+    [id$="-rezerve-content"] table td:nth-child(3),
+    [id$="-rezerve-content"] table th:nth-child(6),
+    [id$="-rezerve-content"] table td:nth-child(6) { display: none; }
+
+    /* ── Grafice Chart.js ── */
+    .chart-wrap {
+      padding: 12px;
+      margin-bottom: 16px;
+      height: 270px;        /* containerul total inclusiv padding */
+    }
+
+    .chart-wrap canvas {
+      height: 220px !important;  /* înălțimea efectivă a canvas-ului */
+      width: 100% !important;
+    }
+
+  } /* end @media mobile */
+
+  @media (min-width: 768px) and (max-width: 1023px) {
+
+    /* ── Grafice Chart.js — tabletă ── */
+    .chart-wrap {
+      height: 340px;
+    }
+
+    .chart-wrap canvas {
+      height: 290px !important;
+      width: 100% !important;
+    }
+
+  } /* end @media tablet */
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div class="sidebar-title">⚽ Nebuliga<span>Fantasy Football Dashboard</span></div>
+  <div class="nav-scroll">
+  <div class="nav-section">General</div>
+  <button class="nav-btn active" onclick="showPage('upload')">📂 Upload date</button>
+  <div class="nav-section">Liga 1</div>
+  <button class="nav-btn" onclick="showPage('l1-golgheter')">🏅 Golgheterul Ligii</button>
+  <button class="nav-btn" onclick="showPage('l1-pozitii')">📊 Golgheteri Posturi</button>
+  <button class="nav-btn" onclick="showPage('l1-portari')">🧤 Portari</button>
+  <button class="nav-btn" onclick="showPage('l1-inspiratie')">💡 Coef. Inspirație</button>
+  <button class="nav-btn" onclick="showPage('l1-rezerve')">🪑 Rezerva de Plâns</button>
+  <button class="nav-btn" onclick="showPage('l1-clasament')">📈 Clasament</button>
+  <button class="nav-btn" onclick="showPage('l1-echipe')">🏟️ Echipe</button>
+  <div class="nav-section">Liga 2</div>
+  <button class="nav-btn liga2" onclick="showPage('l2-golgheter')">🏅 Golgheterul Ligii</button>
+  <button class="nav-btn liga2" onclick="showPage('l2-pozitii')">📊 Golgheteri Posturi</button>
+  <button class="nav-btn liga2" onclick="showPage('l2-portari')">🧤 Portari</button>
+  <button class="nav-btn liga2" onclick="showPage('l2-inspiratie')">💡 Coef. Inspirație</button>
+  <button class="nav-btn liga2" onclick="showPage('l2-rezerve')">🪑 Rezerva de Plâns</button>
+  <button class="nav-btn liga2" onclick="showPage('l2-clasament')">📈 Clasament</button>
+  <button class="nav-btn liga2" onclick="showPage('l2-echipe')">🏟️ Echipe</button>
+  </div><!-- /nav-scroll -->
+</nav>
+
+<!-- Main content -->
+<div id="main">
+
+  <!-- ══ UPLOAD ══ -->
+  <div id="page-upload" class="page active">
+    <div class="page-title">Upload fișiere CSV</div>
+    <div class="page-sub">Încarcă toate fișierele deodată. Tipul, liga și etapa sunt detectate automat din numele fișierului.</div>
+
+    <div id="config-banner"></div>
+    <div id="error-log"><h4>⚠ Erori de parsare</h4><ul id="error-list"></ul></div>
+    <div id="postponed-log"></div>
+
+    <div id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+      <div class="upload-icon">📁</div>
+      <h3>Trage fișierele aici sau apasă pentru a selecta</h3>
+      <p>Acceptă: <code>loturi & echipe etapa X - Liga Y.csv</code> și <code>clasament etapa X - Liga Y.csv</code></p>
+      <button class="btn btn-primary" id="upload-btn" onclick="event.stopPropagation(); document.getElementById('file-input').click()">Selectează fișiere</button>
+    </div>
+    <input type="file" id="file-input" multiple accept=".csv" onchange="handleFiles(this.files)">
+
+    <ul id="file-list"></ul>
+
+    <div id="stats-bar">
+      <div class="stat-pill"><strong id="cnt-files">0</strong>Fișiere încărcate</div>
+      <div class="stat-pill"><strong id="cnt-loturi">0</strong>Loturi & Echipe</div>
+      <div class="stat-pill"><strong id="cnt-clasamente">0</strong>Clasamente</div>
+      <div class="stat-pill"><strong id="cnt-etape">—</strong>Etape (L1 / L2)</div>
+      <div class="stat-pill"><strong id="cnt-echipe">—</strong>Echipe (L1 / L2)</div>
+    </div>
+
+    <button class="btn btn-primary" id="calc-btn" onclick="calculateAll()" disabled>⚡ Calculează statisticile</button>
+    <button class="btn btn-danger btn-sm" style="margin-left:10px" onclick="resetAll()">🗑 Reset</button>
+  </div>
+
+  <!-- ══ LIGA 1 — Golgheterul Ligii ══ -->
+  <div id="page-l1-golgheter" class="page">
+    <div class="page-title">🏅 Golgheterul Ligii 1</div>
+    <div class="page-sub">Top 15 jucători de câmp cu cele mai multe puncte acumulate ca titulari.</div>
+    <div id="l1-golgheter-content"></div>
+  </div>
+
+  <!-- ══ LIGA 1 — Golgheter Posturi ══ -->
+  <div id="page-l1-pozitii" class="page">
+    <div class="page-title">📊 Golgheteri pe Posturi — Liga 1</div>
+    <div class="page-sub">Top 10 pe fiecare poziție (puncte ca titular).</div>
+    <div id="l1-pozitii-content"></div>
+  </div>
+
+  <!-- ══ LIGA 1 — Portari ══ -->
+  <div id="page-l1-portari" class="page">
+    <div class="page-title">🧤 Portari — Liga 1</div>
+    <div class="page-sub">Cel mai bun portar (medie goluri primite ca titular) și Portarul de Vis (total goluri primite).</div>
+    <div id="l1-portari-content"></div>
+  </div>
+
+  <!-- ══ LIGA 1 — Inspiratie ══ -->
+  <div id="page-l1-inspiratie" class="page">
+    <div class="page-title">💡 Coeficientul de Inspirație — Liga 1</div>
+    <div class="page-sub">Măsoară calitatea deciziilor de schimbare a titularilor. Pozitiv = schimbări bune, negativ = schimbări proaste.</div>
+    <div id="l1-inspiratie-content"></div>
+  </div>
+
+  <!-- ══ LIGA 1 — Rezerve ══ -->
+  <div id="page-l1-rezerve" class="page">
+    <div class="page-title">🪑 Rezerva de Plâns — Liga 1</div>
+    <div class="page-sub">Top 15 jucători cu cele mai multe puncte acumulate exclusiv ca rezerve.</div>
+    <div id="l1-rezerve-content"></div>
+  </div>
+
+  <!-- ══ LIGA 1 — Clasament ══ -->
+  <div id="page-l1-clasament" class="page">
+    <div class="page-title">📈 Evoluție Clasament — Liga 1</div>
+    <div class="page-sub">Poziția fiecărei echipe etapă cu etapă. Locul 1 = sus.</div>
+    <div id="l1-clasament-content"></div>
+  </div>
+
+  <!-- ══ LIGA 2 — Golgheterul Ligii ══ -->
+  <div id="page-l2-golgheter" class="page">
+    <div class="page-title" style="color:var(--accent2)">🏅 Golgheterul Ligii 2</div>
+    <div class="page-sub">Top 15 jucători de câmp cu cele mai multe puncte acumulate ca titulari.</div>
+    <div id="l2-golgheter-content"></div>
+  </div>
+
+  <!-- ══ LIGA 2 — Golgheter Posturi ══ -->
+  <div id="page-l2-pozitii" class="page">
+    <div class="page-title" style="color:var(--accent2)">📊 Golgheteri pe Posturi — Liga 2</div>
+    <div class="page-sub">Top 10 pe fiecare poziție (puncte ca titular).</div>
+    <div id="l2-pozitii-content"></div>
+  </div>
+
+  <!-- ══ LIGA 2 — Portari ══ -->
+  <div id="page-l2-portari" class="page">
+    <div class="page-title" style="color:var(--accent2)">🧤 Portari — Liga 2</div>
+    <div class="page-sub">Cel mai bun portar (medie goluri primite ca titular) și Portarul de Vis (total goluri primite).</div>
+    <div id="l2-portari-content"></div>
+  </div>
+
+  <!-- ══ LIGA 2 — Inspiratie ══ -->
+  <div id="page-l2-inspiratie" class="page">
+    <div class="page-title" style="color:var(--accent2)">💡 Coeficientul de Inspirație — Liga 2</div>
+    <div class="page-sub">Măsoară calitatea deciziilor de schimbare a titularilor. Pozitiv = schimbări bune, negativ = schimbări proaste.</div>
+    <div id="l2-inspiratie-content"></div>
+  </div>
+
+  <!-- ══ LIGA 2 — Rezerve ══ -->
+  <div id="page-l2-rezerve" class="page">
+    <div class="page-title" style="color:var(--accent2)">🪑 Rezerva de Plâns — Liga 2</div>
+    <div class="page-sub">Top 15 jucători cu cele mai multe puncte acumulate exclusiv ca rezerve.</div>
+    <div id="l2-rezerve-content"></div>
+  </div>
+
+  <!-- ══ LIGA 2 — Clasament ══ -->
+  <div id="page-l2-clasament" class="page">
+    <div class="page-title" style="color:var(--accent2)">📈 Evoluție Clasament — Liga 2</div>
+    <div class="page-sub">Poziția fiecărei echipe etapă cu etapă. Locul 1 = sus.</div>
+    <div id="l2-clasament-content"></div>
+  </div>
+
+  <!-- ══ LIGA 1 — Echipe ══ -->
+  <div id="page-l1-echipe" class="page">
+    <div class="page-title">🏟️ Echipe — Liga 1</div>
+    <div class="page-sub">Statistici complete per echipă: lot, titulari, rezerve, clasament.</div>
+    <div id="l1-echipe-content"></div>
+  </div>
+
+  <!-- ══ LIGA 2 — Echipe ══ -->
+  <div id="page-l2-echipe" class="page">
+    <div class="page-title" style="color:var(--accent2)">🏟️ Echipe — Liga 2</div>
+    <div class="page-sub">Statistici complete per echipă: lot, titulari, rezerve, clasament.</div>
+    <div id="l2-echipe-content"></div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ══════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════
+const state = {
+  files: [],
+  ligaData: {
+    1: { etapes: {} },
+    2: { etapes: {} }
+  },
+  clasament: {
+    1: {},
+    2: {}
+  },
+  errors: []
+};
+
+const chartInstances = {};
+const posFilters = { 1: 'ATACANT', 2: 'ATACANT' };
+const sliderState = { 1: null, 2: null }; // null = ultima etapă
+const teamLigaMap = {}; // teamName → liga (1 sau 2), built in calculateAll
+const postponedPlayerNames = new Set(); // player names (UPPERCASE) cu cel puțin un meci amânat
+
+// ══════════════════════════════════════════════════════
+// CONFIG — EMBEDDED (nu are nevoie de fetch)
+// ══════════════════════════════════════════════════════
+const config = {"teams":[{"team_name":"BRITANICII","owner_name_short":"D MOLAN","owner_name_full":"Daniel Molan","slug":"britanicii","logo":"images/britanicii_logo.jpg","owner_photo":"images/britanicii_owner.jpg"},{"team_name":"FC MUMU LU' TALPANU'","owner_name_short":"Lică MOLAN","owner_name_full":"Lică Molan","slug":"fc_mumu_lu_talpanu","logo":"images/fc_mumu_lu_talpanu_logo.jpg","owner_photo":"images/fc_mumu_lu_talpanu_owner.jpg"},{"team_name":"SLOBOZ","owner_name_short":"A COSTEIU","owner_name_full":"Adrian Costeiu","slug":"sloboz","logo":"images/sloboz_logo.jpg","owner_photo":"images/sloboz_owner.jpg"},{"team_name":"THE CRYSTAL SHIP","owner_name_short":"C ROSU","owner_name_full":"Cristi Roșu","slug":"the_crystal_ship","logo":"images/the_crystal_ship_logo.jpg","owner_photo":"images/the_crystal_ship_owner.jpg"},{"team_name":"RUBIN KAZAN","owner_name_short":"R HOFBAUER","owner_name_full":"Răzvan Hofbauer","slug":"rubin_kazan","logo":"images/rubin_kazan_logo.jpg","owner_photo":"images/rubin_kazan_owner.jpg"},{"team_name":"RAPID","owner_name_short":"I FOCSANEANU","owner_name_full":"Iulian Focșăneanu","slug":"rapid","logo":"images/rapid_logo.jpg","owner_photo":"images/rapid_owner.jpg"},{"team_name":"RTM CHIAJNA","owner_name_short":"R TUDOR","owner_name_full":"Răzvan Tudor","slug":"rtm_chiajna","logo":"images/rtm_chiajna_logo.jpg","owner_photo":"images/rtm_chiajna_owner.jpg"},{"team_name":"ATLETICO DRAGALINA","owner_name_short":"G BERCEANU","owner_name_full":"Gabriel Berceanu","slug":"atletico_dragalina","logo":"images/atletico_dragalina_logo.jpg","owner_photo":"images/atletico_dragalina_owner.jpg"},{"team_name":"AS STEAUA FERENTARI","owner_name_short":"F CEAFALAU","owner_name_full":"Florin Ceafălău","slug":"as_steaua_ferentari","logo":"images/as_steaua_ferentari_logo.jpg","owner_photo":"images/as_steaua_ferentari_owner.jpg"},{"team_name":"THE GUNNERS","owner_name_short":"D SONERIU","owner_name_full":"Dragoș Șoneriu","slug":"the_gunners","logo":"images/the_gunners_logo.jpg","owner_photo":"images/the_gunners_owner.jpg"},{"team_name":"METALU' BOB","owner_name_short":"A BOBEICA","owner_name_full":"Andrei Bobeică","slug":"metalu_bob","logo":"images/metalu_bob_logo.jpg","owner_photo":"images/metalu_bob_owner.jpg"},{"team_name":"FC HUTU","owner_name_short":"M HUTU","owner_name_full":"Marius Huțu","slug":"fc_hutu","logo":"images/fc_hutu_logo.jpg","owner_photo":"images/fc_hutu_owner.jpg"},{"team_name":"IONEL MESSI","owner_name_short":"B CHIRILA","owner_name_full":"Bogdan Chirilă","slug":"ionel_messi","logo":"images/ionel_messi_logo.jpg","owner_photo":"images/ionel_messi_owner.jpg"},{"team_name":"JUVERPOOL","owner_name_short":"G DINCA","owner_name_full":"Gabriel Dincă","slug":"juverpool","logo":"images/juverpool_logo.jpg","owner_photo":"images/juverpool_owner.jpg"},{"team_name":"TEI, CARTIER DE TREI LEI","owner_name_short":"I ALEXANDRU","owner_name_full":"Ion Alexandru","slug":"tei_cartier_de_trei_lei","logo":"images/tei_cartier_de_trei_lei_logo.jpg","owner_photo":"images/tei_cartier_de_trei_lei_owner.jpg"},{"team_name":"PAVEL NEDVED","owner_name_short":"D ROSU","owner_name_full":"Dan Roșu","slug":"pavel_nedved","logo":"images/pavel_nedved_logo.jpg","owner_photo":"images/pavel_nedved_owner.jpg"},{"team_name":"TUNETUL FC","owner_name_short":"A ISPAS","owner_name_full":"Andrei Ispas","slug":"tunetul_fc","logo":"images/tunetul_fc_logo.jpg","owner_photo":"images/tunetul_fc_owner.jpg"},{"team_name":"BOBA JUNIORS","owner_name_short":"S BOBEICA","owner_name_full":"Sorin Bobeică","slug":"boba_juniors","logo":"images/boba_juniors_logo.jpg","owner_photo":"images/boba_juniors_owner.jpg"},{"team_name":"FCEI MAI BUNI","owner_name_short":"A RADULESCU","owner_name_full":"Andrei Rădulescu","slug":"fcei_mai_buni","logo":"images/fcei_mai_buni_logo.jpg","owner_photo":"images/fcei_mai_buni_owner.jpg"},{"team_name":"FLAKERS UTD","owner_name_short":"M CRACIUN","owner_name_full":"Mihai Crăciun","slug":"flakers_utd","logo":"images/flakers_utd_logo.jpg","owner_photo":"images/flakers_utd_owner.jpg"},{"team_name":"FC TORPILA BUCURESTI","owner_name_short":"R ENACHESCU","owner_name_full":"Răzvan Enăchescu","slug":"fc_torpila_bucuresti","logo":"images/fc_torpila_bucuresti_logo.jpg","owner_photo":"images/fc_torpila_bucuresti_owner.jpg"},{"team_name":"FC WIN MASTER","owner_name_short":"B GHEORGHE","owner_name_full":"Bogdan Gheorghe","slug":"fc_win_master","logo":"images/fc_win_master_logo.jpg","owner_photo":"images/fc_win_master_owner.jpg"},{"team_name":"MIGHTY MELONS","owner_name_short":"N BADESCU","owner_name_full":"Nicu Bădescu","slug":"mighty_melons","logo":"images/mighty_melons_logo.jpg","owner_photo":"images/mighty_melons_owner.jpg"},{"team_name":"FC COJASCA","owner_name_short":"V PARCALABU","owner_name_full":"Valentin Pârcălabu","slug":"fc_cojasca","logo":"images/fc_cojasca_logo.jpg","owner_photo":"images/fc_cojasca_owner.jpg"},{"team_name":"RAPID FETESTI","owner_name_short":"P GROZEA","owner_name_full":"Puiu Grozea","slug":"rapid_fetesti","logo":"images/rapid_fetesti_logo.jpg","owner_photo":"images/rapid_fetesti_owner.jpg"},{"team_name":"FC HERMANSTAR","owner_name_short":"A IONITA","owner_name_full":"Alex Ioniță","slug":"fc_hermanstar","logo":"images/fc_hermanstar_logo.jpg","owner_photo":"images/fc_hermanstar_owner.jpg"},{"team_name":"CHELSEA PITESTI","owner_name_short":"B FLUTUREL","owner_name_full":"Bogdan Fluturel","slug":"chelsea_pitesti","logo":"images/chelsea_pitesti_logo.jpg","owner_photo":"images/chelsea_pitesti_owner.jpg"},{"team_name":"FC PINALTY","owner_name_short":"L ALBU","owner_name_full":"Lucian Albu","slug":"fc_pinalty","logo":"images/fc_pinalty_logo.jpg","owner_photo":"images/fc_pinalty_owner.jpg"},{"team_name":"FC SONICS","owner_name_short":"B MILEA","owner_name_full":"Bogdan Milea","slug":"fc_sonics","logo":"images/fc_sonics_logo.jpg","owner_photo":"images/fc_sonics_owner.jpg"},{"team_name":"SILVA NEGRA","owner_name_short":"S CORNEANU","owner_name_full":"Silviu Corneanu","slug":"silva_negra","logo":"images/silva_negra_logo.jpg","owner_photo":"images/silva_negra_owner.jpg"},{"team_name":"FC COLENTINA","owner_name_short":"M PANA","owner_name_full":"Mădălin Pană","slug":"fc_colentina","logo":"images/fc_colentina_logo.jpg","owner_photo":"images/fc_colentina_owner.jpg"},{"team_name":"R.A.F.A.","owner_name_short":"C MIHALA","owner_name_full":"Cristi Mihală","slug":"r_a_f_a","logo":"images/r_a_f_a_logo.jpg","owner_photo":"images/r_a_f_a_owner.jpg"}],"club_names":{"ARS":"Arsenal","AV":"Aston Villa","BOU":"Bournemouth","BRE":"Brest","BRI":"Brighton","CHE":"Chelsea","CP":"Crystal Palace","EVE":"Everton","FUL":"Fulham","LEE":"Leeds","LIV":"Liverpool","MC":"Man. City","MU":"Man. United","NEW":"Newcastle","NOT":"Nottingham Forest","TOT":"Tottenham Hotspur","WH":"West Ham United","WLV":"Wolverhampton","SUN":"Sunderland","BRN":"Brentford","BAR":"FC Barcelona","RM":"Real Madrid","AM":"Atlético Madrid","BIL":"Athletic Bilbao","SOC":"Real Sociedad","VIL":"Villarreal","BET":"Betis Sevilla","VLC":"Rayo Vallecano","GET":"Getafe","ALA":"Alavés","GIR":"Girona","SEV":"Sevilla FC","OVI":"Real Oviedo","CEL":"Celta Vigo","ESP":"Espanyol","OSA":"Osasuna","LEV":"Levante","MAL":"Mallorca","VAL":"Valencia","ELC":"Elche","JUV":"Juventus","INT":"Inter Milan","MIL":"AC Milan","NAP":"Napoli","ATA":"Atalanta","ROM":"AS Roma","LAZ":"SS Lazio","FIO":"Fiorentina","BOL":"Bologna","TOR":"Torino FC","UDI":"Udinese","SAS":"Sassuolo","GEN":"Genoa","LEC":"US Lecce","CAG":"Cagliari","VER":"Verona","PIS":"Pisa","PAR":"Parma","COM":"Como","MON":"AS Monaco","BM":"Bayern München","DOR":"Borussia Dortmund","LPZ":"RB Leipzig","LVN":"Bayer Leverkusen","FRA":"Eintracht Frankfurt","STU":"VfB Stuttgart","HOF":"Hoffenheim","AUG":"Augsburg","WB":"Werder Bremen","HEI":"Heidenheim","MAI":"FSV Mainz","KOL":"FC Köln","MNG":"Borussia Mönchengladbach","WOL":"Wolfsburg","BUR":"Burnley","HMB":"Hamburger SV","STP":"VfB Stuttgart","STR":"RC Strasbourg","BL":"Bayer Leverkusen","PSG":"Paris Saint-Germain","LYO":"Olympique Lyon","OM":"Olympique Marseille","LIL":"LOSC Lille","REN":"Rennes","NAN":"Nantes","LEN":"Lens","NIC":"Nice","TOU":"Toulouse","AUX":"Auxerre","ANG":"Angers","LOR":"Lorient","LH":"Le Havre","FRE":"Freiburg","MET":"Metz","UB":"Union Berlin"}};
+
+function loadConfig() { /* config este embedded — nimic de făcut */ }
+
+// ── Config helpers ──
+function getTeamConfig(teamName) {
+  if (!teamName || !config.teams) return null;
+  const n = teamName.trim().toUpperCase();
+  return config.teams.find(t => t.team_name && t.team_name.toUpperCase() === n) || null;
+}
+
+function getClubFullName(abbrev) {
+  if (!abbrev) return '';
+  const full = (config.club_names || {})[abbrev] || (config.club_names || {})[abbrev.toUpperCase()];
+  if (!full) return `<span class="abbrev-unknown" title="Abreviere necunoscută: ${abbrev}">${abbrev} <em style="font-size:10px">(?)</em></span>`;
+  if (full.startsWith('⚠️')) return `<span class="abbrev-warn" title="${full}">${abbrev} <em style="font-size:10px">(?)</em></span>`;
+  return full;
+}
+
+function teamLogoImg(teamName, size) {
+  const tc = getTeamConfig(teamName);
+  if (!tc || !tc.logo) return '';
+  const cls = size === 'lg' ? 'team-logo' : 'team-logo-sm';
+  return `<img src="${tc.logo}" alt="" class="${cls}" onerror="this.style.display='none'">`;
+}
+
+function ownerPhotoImg(teamName) {
+  const tc = getTeamConfig(teamName);
+  if (!tc || !tc.owner_photo) return '';
+  return `<img src="${tc.owner_photo}" alt="" class="owner-photo" onerror="this.style.display='none'">`;
+}
+
+// ══════════════════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  const btns = document.querySelectorAll('.nav-btn');
+  btns.forEach(b => { if (b.getAttribute('onclick').includes("'" + id + "'")) b.classList.add('active'); });
+}
+
+// ══════════════════════════════════════════════════════
+// FILE UPLOAD
+// ══════════════════════════════════════════════════════
+function handleDragOver(e) { e.preventDefault(); document.getElementById('upload-zone').classList.add('drag'); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  handleFiles(e.dataTransfer.files);
+}
+
+function handleFiles(files) {
+  const arr = Array.from(files);
+  let tasks = arr.map(f => processFile(f));
+  Promise.all(tasks).then(updateUploadUI);
+}
+
+function processFile(file) {
+  return new Promise(resolve => {
+    const info = parseFilename(file.name);
+    if (!info) {
+      state.files.push({ name: file.name, type: 'unknown', status: 'err', message: 'Nume fișier nerecunoscut' });
+      return resolve();
+    }
+    const reader = new FileReader();
+    reader.onload = e => {
+      const text = e.target.result;
+      try {
+        if (info.isLoturi) {
+          const { teams, warnings, postponedGroups } = parseLotCSV(text, info.etapa, info.liga);
+          if (!state.ligaData[info.liga].etapes[info.etapa]) state.ligaData[info.liga].etapes[info.etapa] = {};
+          teams.forEach(t => { state.ligaData[info.liga].etapes[info.etapa][t.teamName] = t; });
+          const warnMsg = warnings.length ? ` (⚠ ${warnings.join('; ')})` : '';
+          const hasPostp = postponedGroups && postponedGroups.length > 0;
+          if (hasPostp) {
+            for (const group of postponedGroups)
+              for (const entry of group.entries) postponedPlayerNames.add(entry.name.toUpperCase());
+            displayPostponedAlert(file.name, postponedGroups);
+          }
+          state.files.push({ name: file.name, type: 'loturi', liga: info.liga, etapa: info.etapa, status: (warnings.length || hasPostp) ? 'warn' : 'ok', message: `${teams.length} echipe parsate${warnMsg}${hasPostp ? ' — conține valori amânate ⏸️' : ''}` });
+        } else if (info.isClasament) {
+          const standings = parseClasamentCSV(text, info.etapa, info.liga);
+          state.clasament[info.liga][info.etapa] = standings;
+          state.files.push({ name: file.name, type: 'clasament', liga: info.liga, etapa: info.etapa, status: 'ok', message: `${standings.length} echipe` });
+        }
+      } catch (err) {
+        state.errors.push(`${file.name}: ${err.message}`);
+        state.files.push({ name: file.name, type: info.isLoturi ? 'loturi' : 'clasament', liga: info.liga, etapa: info.etapa, status: 'err', message: err.message });
+      }
+      resolve();
+    };
+    reader.readAsText(file, 'UTF-8');
+  });
+}
+
+function parseFilename(name) {
+  const etapaMatch = name.match(/etapa\s+(\d+)/i);
+  const ligaMatch = name.match(/liga\s+(\d+)/i);
+  if (!etapaMatch || !ligaMatch) return null;
+  const lname = name.toLowerCase();
+  return {
+    etapa: parseInt(etapaMatch[1]),
+    liga: parseInt(ligaMatch[1]),
+    isLoturi: lname.includes('lotur') || lname.includes('echip'),
+    isClasament: lname.includes('clasament')
+  };
+}
+
+function updateUploadUI() {
+  const ul = document.getElementById('file-list');
+  ul.innerHTML = '';
+  state.files.forEach(f => {
+    const li = document.createElement('li');
+    const icon = f.status === 'ok' ? '✅' : (f.status === 'warn' ? '⚠️' : '❌');
+    const typeLabel = f.type === 'loturi' ? `L&E L${f.liga} E${f.etapa}` : (f.type === 'clasament' ? `CLAS L${f.liga} E${f.etapa}` : '?');
+    const statusCls = f.status === 'warn' ? 'warn2' : f.status;
+    li.innerHTML = `<span>${icon}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name}</span><span class="team-abbrev">${typeLabel}</span><span class="fstatus ${statusCls}">${f.message}</span>`;
+    ul.appendChild(li);
+  });
+
+  const loturi = state.files.filter(f => f.type === 'loturi' && f.status !== 'err');
+  const clasamente = state.files.filter(f => f.type === 'clasament' && f.status === 'ok');
+  document.getElementById('cnt-files').textContent = state.files.length;
+  document.getElementById('cnt-loturi').textContent = loturi.length;
+  document.getElementById('cnt-clasamente').textContent = clasamente.length;
+
+  const e1 = Object.keys(state.ligaData[1].etapes).length;
+  const e2 = Object.keys(state.ligaData[2].etapes).length;
+  document.getElementById('cnt-etape').textContent = `${e1} / ${e2}`;
+
+  const teams1 = new Set(); const teams2 = new Set();
+  Object.values(state.ligaData[1].etapes).forEach(ep => Object.keys(ep).forEach(t => teams1.add(t)));
+  Object.values(state.ligaData[2].etapes).forEach(ep => Object.keys(ep).forEach(t => teams2.add(t)));
+  document.getElementById('cnt-echipe').textContent = `${teams1.size} / ${teams2.size}`;
+
+  if (state.errors.length > 0) {
+    const el = document.getElementById('error-log');
+    el.style.display = 'block';
+    document.getElementById('error-list').innerHTML = state.errors.map(e => `<li>${e}</li>`).join('');
+  }
+
+  const hasData = loturi.length > 0;
+  document.getElementById('calc-btn').disabled = !hasData;
+}
+
+function resetAll() {
+  state.files = []; state.errors = [];
+  state.ligaData = { 1: { etapes: {} }, 2: { etapes: {} } };
+  state.clasament = { 1: {}, 2: {} };
+  sliderState[1] = null; sliderState[2] = null;
+  postponedPlayerNames.clear();
+  const postponedEl = document.getElementById('postponed-log');
+  if (postponedEl) { postponedEl.style.display = 'none'; postponedEl.innerHTML = ''; }
+  Object.values(chartInstances).forEach(c => { try { c.destroy(); } catch(e){} });
+  Object.keys(chartInstances).forEach(k => delete chartInstances[k]);
+  document.getElementById('file-list').innerHTML = '';
+  document.getElementById('file-input').value = '';
+  document.getElementById('calc-btn').disabled = true;
+  document.getElementById('error-log').style.display = 'none';
+  document.getElementById('cnt-files').textContent = '0';
+  document.getElementById('cnt-loturi').textContent = '0';
+  document.getElementById('cnt-clasamente').textContent = '0';
+  document.getElementById('cnt-etape').textContent = '—';
+  document.getElementById('cnt-echipe').textContent = '—';
+}
+
+// ══════════════════════════════════════════════════════
+// CSV PARSER — LOTURI & ECHIPE
+// ══════════════════════════════════════════════════════
+const BLOCK_STARTS = [0, 27, 54, 81, 108, 135, 162, 189];
+const SECTION_LABELS = new Set(['PORTARI', 'FUNDASI', 'MIJLOCASI', 'ATACANTI', 'FUNDAŞI', 'MIJLOCAŞI', 'ATACANŢI']);
+const SKIP_TITULAR = new Set(['PUNCTE', 'formula', 'scor', '0', '']);
+
+function parseNum(val) {
+  if (val === undefined || val === null || val === '' || val === '#N/A') return 0;
+  const n = parseFloat(String(val).replace(',', '.'));
+  return isNaN(n) ? 0 : n;
+}
+
+function safeStr(val) {
+  return (val || '').toString().trim();
+}
+
+function parseLotCSV(csvText, etapa, liga) {
+  const parsed = Papa.parse(csvText, { skipEmptyLines: false });
+  const rows = parsed.data;
+  const teams = [];
+  const warnings = [];
+
+  const postponedGroups = [];
+
+  for (let blockIdx = 0; blockIdx < BLOCK_STARTS.length; blockIdx++) {
+    const blockStart = BLOCK_STARTS[blockIdx];
+    if (blockStart >= rows.length) break;
+
+    const leftResult = parseTeamBlock(rows, blockStart, true, etapa, liga);
+    if (leftResult) { teams.push(leftResult.team); if (leftResult.warning) warnings.push(leftResult.warning); }
+
+    const rightResult = parseTeamBlock(rows, blockStart, false, etapa, liga);
+    if (rightResult) { teams.push(rightResult.team); if (rightResult.warning) warnings.push(rightResult.warning); }
+
+    // Colectare meciuri amânate per bloc
+    const leftEntries = (leftResult && leftResult.postponed) ? leftResult.postponed : [];
+    const rightEntries = (rightResult && rightResult.postponed) ? rightResult.postponed : [];
+    if (leftEntries.length || rightEntries.length) {
+      const leftName = leftResult ? leftResult.team.teamName : '?';
+      const rightName = rightResult ? rightResult.team.teamName : '?';
+      postponedGroups.push({
+        bloc: blockIdx + 1,
+        match: `${leftName} vs ${rightName}`,
+        entries: [...leftEntries, ...rightEntries]
+      });
+    }
+  }
+
+  return { teams, warnings, postponedGroups };
+}
+
+function parseTeamBlock(rows, blockStart, isLeft, etapa, liga) {
+  const C = isLeft ? {
+    teamName: 0, owner: 2, cumulPts: 3, etapaPts: 5,
+    lotName: 1, lotAbbrev: 2, lotPts: 3,
+    titName: 7, titAbbrev: 8, titPts: 9, titGKConceded: 10,
+    pFieldPts: 9, pGKConceded: 10,
+    fFormation: 8
+  } : {
+    teamName: 12, owner: 14, cumulPts: 15, etapaPts: 17,
+    lotName: 13, lotAbbrev: 14, lotPts: 15,
+    titName: 19, titAbbrev: 20, titPts: 21, titGKConceded: 22,
+    pFieldPts: 21, pGKConceded: 22,
+    fFormation: 20
+  };
+
+  const header = rows[blockStart];
+  if (!header || header.length === 0) return null;
+
+  const teamName = safeStr(header[C.teamName]);
+  const owner = isLeft ? safeStr(header[2]) : safeStr(header[14]);
+  const cumulPts = header[C.cumulPts];
+
+  if (!teamName || String(cumulPts) === '#N/A') return null;
+  if (!isLeft && !teamName) return null;
+
+  // ── GK Titular (offset +1) with validation ──
+  const portarRow = rows[blockStart + 1] || [];
+  const gkTitularRaw = safeStr(portarRow[C.titName]);
+  const gkTitular = gkTitularRaw.toUpperCase();
+  const gkConceded = parseNum(portarRow[C.titGKConceded]);
+
+  let warning = null;
+  if (!gkTitularRaw) {
+    warning = `${teamName} Et.${etapa}: portar titular lipsă`;
+  }
+
+  // ── Field Titulars (offsets +2 to +11) ──
+  const fieldTitulars = [];
+  for (let i = 2; i <= 11; i++) {
+    const row = rows[blockStart + i] || [];
+    const rawName = safeStr(row[C.titName]);
+    if (!rawName || SKIP_TITULAR.has(rawName) || /^\d/.test(rawName)) continue;
+    if (SECTION_LABELS.has(rawName.toUpperCase())) continue;
+    const pts = parseNum(row[C.titPts]);
+    const abbrev = safeStr(row[C.titAbbrev]);
+    fieldTitulars.push({ name: rawName, abbrev, pts });
+  }
+
+  // ── PUNCTE row (offset +12) ──
+  const puncteRow = rows[blockStart + 12] || [];
+  const totalFieldPts = parseNum(puncteRow[C.pFieldPts]);
+  const totalGKConceded = parseNum(puncteRow[C.pGKConceded]);
+
+  // ── Formation (offset +13) ──
+  const formulaRow = rows[blockStart + 13] || [];
+  const formation = safeStr(formulaRow[C.fFormation]);
+
+  // ── Lot with positions ──
+  const lot = {};
+  const postponed = []; // valori non-numerice detectate (meciuri amânate)
+  const blockSide = isLeft ? 'stânga' : 'dreapta';
+
+  // Helper: verifică dacă valoarea pts e non-numerică (ex: "R")
+  function checkLotPts(rawName, abbrev, rawPtsVal, posLabel) {
+    const raw = safeStr(rawPtsVal);
+    if (raw === '' || raw === '#N/A') return false; // gol = 0, acceptabil
+    const isNonNum = isNaN(parseFloat(raw.replace(',', '.')));
+    if (isNonNum) postponed.push({ position: posLabel, name: rawName, abbrev, side: blockSide, rawValue: raw });
+    return isNonNum;
+  }
+
+  // GKs (offsets +2, +3) — portarii nu au puncte în sens de câmp, nu verificăm
+  for (const off of [2, 3]) {
+    const row = rows[blockStart + off] || [];
+    const rawName = safeStr(row[C.lotName]);
+    if (!rawName || SECTION_LABELS.has(rawName.toUpperCase())) continue;
+    const name = rawName.toUpperCase();
+    lot[name] = { name, abbrev: safeStr(row[C.lotAbbrev]), pts: parseNum(row[C.lotPts]), position: 'PORTAR' };
+  }
+
+  // Fundasi (offsets +5 to +9)
+  for (let off = 5; off <= 9; off++) {
+    const row = rows[blockStart + off] || [];
+    const name = safeStr(row[C.lotName]);
+    if (!name || SECTION_LABELS.has(name.toUpperCase())) continue;
+    const abbrev = safeStr(row[C.lotAbbrev]);
+    const isPostp = checkLotPts(name, abbrev, row[C.lotPts], 'Fundaș');
+    lot[name] = { name, abbrev, pts: parseNum(row[C.lotPts]), position: 'FUNDAS', postponed: isPostp };
+  }
+
+  // Mijlocasi (offsets +11 to +17)
+  for (let off = 11; off <= 17; off++) {
+    const row = rows[blockStart + off] || [];
+    const name = safeStr(row[C.lotName]);
+    if (!name || SECTION_LABELS.has(name.toUpperCase())) continue;
+    const abbrev = safeStr(row[C.lotAbbrev]);
+    const isPostp = checkLotPts(name, abbrev, row[C.lotPts], 'Mijlocaș');
+    lot[name] = { name, abbrev, pts: parseNum(row[C.lotPts]), position: 'MIJLOCAS', postponed: isPostp };
+  }
+
+  // Atacanti (offsets +19 to +24)
+  for (let off = 19; off <= 24; off++) {
+    const row = rows[blockStart + off] || [];
+    const name = safeStr(row[C.lotName]);
+    if (!name || SECTION_LABELS.has(name.toUpperCase())) continue;
+    const abbrev = safeStr(row[C.lotAbbrev]);
+    const isPostp = checkLotPts(name, abbrev, row[C.lotPts], 'Atacant');
+    lot[name] = { name, abbrev, pts: parseNum(row[C.lotPts]), position: 'ATACANT', postponed: isPostp };
+  }
+
+  return {
+    team: { teamName, owner, liga, etapa, cumulPts: parseNum(cumulPts), etapaPts: parseNum(header[C.etapaPts]), gkTitular, gkConceded, fieldTitulars, lot, formation, totalFieldPts, totalGKConceded },
+    warning,
+    postponed
+  };
+}
+
+// ══════════════════════════════════════════════════════
+// CSV PARSER — CLASAMENT
+// ══════════════════════════════════════════════════════
+function parseClasamentCSV(csvText, etapa, liga) {
+  const parsed = Papa.parse(csvText, { skipEmptyLines: false });
+  const rows = parsed.data;
+  const standings = [];
+  for (let i = 2; i <= 17; i++) {
+    const row = rows[i];
+    if (!row || !row[18]) continue;
+    const team = safeStr(row[18]);
+    if (!team) continue;
+    standings.push({
+      position: parseInt(row[17]) || (i - 1),
+      team, owner: safeStr(row[19]),
+      played: parseInt(row[20]) || 0,
+      wins: parseInt(row[21]) || 0,
+      draws: parseInt(row[22]) || 0,
+      losses: parseInt(row[23]) || 0,
+      goalsFor: parseInt(row[24]) || 0,
+      goalsAgainst: parseInt(row[25]) || 0,
+      points: parseInt(row[26]) || 0,
+      etapa, liga
+    });
+  }
+  return standings;
+}
+
+// ══════════════════════════════════════════════════════
+// STATISTICS
+// ══════════════════════════════════════════════════════
+
+function calcGolgheterulLigii(liga) {
+  const playerMap = {};
+  const etapes = state.ligaData[liga].etapes;
+  for (const [etapa, etapeData] of Object.entries(etapes)) {
+    for (const [teamName, td] of Object.entries(etapeData)) {
+      for (const tit of td.fieldTitulars) {
+        const key = tit.name;
+        if (!playerMap[key]) {
+          const lotEntry = td.lot[key] || {};
+          playerMap[key] = { name: key, abbrev: tit.abbrev, position: lotEntry.position || 'UNKNOWN', pts: 0, appearances: 0, nebuligaTeam: teamName };
+        }
+        playerMap[key].pts += tit.pts;
+        playerMap[key].appearances++;
+        if (td.lot[key]) playerMap[key].abbrev = td.lot[key].abbrev;
+      }
+    }
+  }
+  return Object.values(playerMap).sort((a, b) => b.pts - a.pts || b.appearances - a.appearances).slice(0, 15);
+}
+
+function calcGolgheterPozitie(liga, position) {
+  const playerMap = {};
+  const etapes = state.ligaData[liga].etapes;
+  for (const [etapa, etapeData] of Object.entries(etapes)) {
+    for (const [teamName, td] of Object.entries(etapeData)) {
+      for (const tit of td.fieldTitulars) {
+        const lotEntry = td.lot[tit.name] || {};
+        const pos = lotEntry.position || 'UNKNOWN';
+        if (pos !== position) continue;
+        const key = tit.name;
+        if (!playerMap[key]) {
+          playerMap[key] = { name: key, abbrev: td.lot[key]?.abbrev || tit.abbrev, position: pos, pts: 0, appearances: 0, nebuligaTeam: teamName };
+        }
+        playerMap[key].pts += tit.pts;
+        playerMap[key].appearances++;
+      }
+    }
+  }
+  return Object.values(playerMap).sort((a, b) => b.pts - a.pts || b.appearances - a.appearances).slice(0, 10);
+}
+
+function calcCeiMaiBuniPortari(liga) {
+  const gkMap = {};
+  const etapes = state.ligaData[liga].etapes;
+  for (const [etapa, etapeData] of Object.entries(etapes)) {
+    for (const [teamName, td] of Object.entries(etapeData)) {
+      const gkTeam = td.gkTitular;
+      if (!gkTeam) continue;
+      if (!gkMap[gkTeam]) gkMap[gkTeam] = { name: gkTeam, goalsConceded: 0, appearances: 0, nebuligaTeams: new Set() };
+      gkMap[gkTeam].goalsConceded += td.gkConceded;
+      gkMap[gkTeam].appearances++;
+      gkMap[gkTeam].nebuligaTeams.add(teamName);
+    }
+  }
+  return Object.values(gkMap)
+    .filter(g => g.appearances > 0)
+    .map(g => ({ ...g, avg: g.goalsConceded / g.appearances, teamsArr: [...g.nebuligaTeams] }))
+    .sort((a, b) => a.avg - b.avg || a.goalsConceded - b.goalsConceded)
+    .slice(0, 10);
+}
+
+function calcCoeficientInspiratiei(liga) {
+  const ligaData = state.ligaData[liga];
+  const etapes = Object.keys(ligaData.etapes).map(Number).sort((a, b) => a - b);
+  const allTeams = new Set();
+  for (const etapa of etapes) Object.keys(ligaData.etapes[etapa]).forEach(t => allTeams.add(t));
+  const results = [];
+  for (const teamName of allTeams) {
+    let totalCoef = 0;
+    const perEtapa = [];
+    for (let i = 1; i < etapes.length; i++) {
+      const prevEt = etapes[i - 1];
+      const currEt = etapes[i];
+      const prev = ligaData.etapes[prevEt]?.[teamName];
+      const curr = ligaData.etapes[currEt]?.[teamName];
+      if (!prev || !curr) continue;
+      const prevNames = new Set(prev.fieldTitulars.map(t => t.name));
+      const currNames = new Set(curr.fieldTitulars.map(t => t.name));
+      const removed = prev.fieldTitulars.filter(t => !currNames.has(t.name));
+      const added = curr.fieldTitulars.filter(t => !prevNames.has(t.name));
+      let coefCamp = 0;
+      for (const p of added) coefCamp += p.pts;
+      for (const p of removed) { const lotEntry = curr.lot[p.name]; coefCamp -= (lotEntry ? lotEntry.pts : 0); }
+      let coefGK = 0;
+      if (prev.gkTitular !== curr.gkTitular && prev.gkTitular && curr.gkTitular) {
+        const oldGKLot = curr.lot[prev.gkTitular];
+        const oldGKConceded = oldGKLot ? oldGKLot.pts : 0;
+        coefGK = oldGKConceded - curr.gkConceded;
+      }
+      const etapaCoef = coefCamp + coefGK;
+      totalCoef += etapaCoef;
+      perEtapa.push({ etapa: currEt, coefCamp, coefGK, total: etapaCoef });
+    }
+    const owner = ligaData.etapes[etapes[0]]?.[teamName]?.owner || '';
+    results.push({ teamName, owner, totalCoef, perEtapa });
+  }
+  return results.sort((a, b) => b.totalCoef - a.totalCoef);
+}
+
+function calcRezervaDenVis(liga) {
+  const playerMap = {};
+  const etapes = state.ligaData[liga].etapes;
+  for (const [etapa, etapeData] of Object.entries(etapes)) {
+    for (const [teamName, td] of Object.entries(etapeData)) {
+      const titularNames = new Set(td.fieldTitulars.map(t => t.name));
+      for (const [name, lotEntry] of Object.entries(td.lot)) {
+        if (lotEntry.position === 'PORTAR') continue;
+        if (titularNames.has(name)) continue;
+        if (!playerMap[name]) {
+          playerMap[name] = { name, abbrev: lotEntry.abbrev, position: lotEntry.position, pts: 0, appearances: 0, nebuligaTeam: teamName };
+        }
+        playerMap[name].pts += lotEntry.pts;
+        playerMap[name].appearances++;
+      }
+    }
+  }
+  return Object.values(playerMap).filter(p => p.pts > 0).sort((a, b) => b.pts - a.pts || b.appearances - a.appearances).slice(0, 15);
+}
+
+function calcPortarulDeVis(liga) {
+  // Cheia = abrevierea din col C/O (standardizată), nu numele din col B (care variază între CSV-uri)
+  const gkMap = {};
+  const etapes = state.ligaData[liga].etapes;
+  for (const [etapa, etapeData] of Object.entries(etapes)) {
+    for (const [teamName, td] of Object.entries(etapeData)) {
+      for (const [name, lotEntry] of Object.entries(td.lot)) {
+        if (lotEntry.position !== 'PORTAR') continue;
+        const key = lotEntry.abbrev || name; // abbrev din col C/O
+        if (!gkMap[key]) gkMap[key] = { name: key, abbrev: key, totalConceded: 0, appearances: 0, nebuligaTeams: new Set() };
+        gkMap[key].totalConceded += lotEntry.pts;
+        gkMap[key].appearances++;
+        gkMap[key].nebuligaTeams.add(teamName);
+      }
+    }
+  }
+  return Object.values(gkMap)
+    .filter(g => g.appearances > 0)
+    .map(g => ({ ...g, avg: g.totalConceded / g.appearances, teamsArr: [...g.nebuligaTeams] }))
+    .sort((a, b) => (a.totalConceded / a.appearances) - (b.totalConceded / b.appearances) || a.totalConceded - b.totalConceded)
+    .slice(0, 10);
+}
+
+// ══════════════════════════════════════════════════════
+// MAIN CALCULATE
+// ══════════════════════════════════════════════════════
+function calculateAll() {
+  for (const liga of [1, 2]) {
+    const hasData = Object.keys(state.ligaData[liga].etapes).length > 0;
+    const suffix = `l${liga}`;
+    const accentColor = liga === 1 ? 'var(--accent1)' : 'var(--accent2)';
+
+    if (!hasData) {
+      ['golgheter', 'pozitii', 'portari', 'inspiratie', 'rezerve', 'clasament', 'echipe'].forEach(s => {
+        const el = document.getElementById(`${suffix}-${s}-content`);
+        if (el) el.innerHTML = emptyState('Nu există date pentru Liga ' + liga + '.');
+      });
+      continue;
+    }
+
+    // Construiește teamLigaMap pentru nebuligaCell clickabil
+    for (const etapaData of Object.values(state.ligaData[liga].etapes)) {
+      for (const teamName of Object.keys(etapaData)) teamLigaMap[teamName] = liga;
+    }
+
+    renderGolgheterLiga(liga, calcGolgheterulLigii(liga), accentColor);
+    renderGolgheterPozitii(liga, accentColor);
+    renderPortari(liga, calcCeiMaiBuniPortari(liga), calcPortarulDeVis(liga), accentColor);
+    renderInspiratieCoef(liga, calcCoeficientInspiratiei(liga), accentColor);
+    renderRezervaDenVis(liga, calcRezervaDenVis(liga), accentColor);
+    renderClasamentChart(liga, accentColor);
+    renderEchipePage(liga, accentColor);
+  }
+
+  const has1 = Object.keys(state.ligaData[1].etapes).length > 0;
+  const has2 = Object.keys(state.ligaData[2].etapes).length > 0;
+  if (has1) showPage('l1-golgheter');
+  else if (has2) showPage('l2-golgheter');
+}
+
+// ══════════════════════════════════════════════════════
+// RENDER HELPERS
+// ══════════════════════════════════════════════════════
+function emptyState(msg) {
+  return `<div class="empty-state"><div class="icon">📭</div><p>${msg}</p></div>`;
+}
+
+function rankCell(i) {
+  if (i === 0) return `<td class="rank gold">🥇</td>`;
+  if (i === 1) return `<td class="rank silver">🥈</td>`;
+  if (i === 2) return `<td class="rank bronze">🥉</td>`;
+  return `<td class="rank">${i + 1}</td>`;
+}
+
+function posBadge(pos) {
+  const map = { FUNDAS: ['F', 'pos-F'], MIJLOCAS: ['M', 'pos-M'], ATACANT: ['A', 'pos-A'], PORTAR: ['P', 'pos-P'] };
+  const [label, cls] = map[pos] || ['?', ''];
+  return `<span class="pos-badge ${cls}">${label}</span>`;
+}
+
+function ptsCell(pts) {
+  const cls = pts > 0 ? 'pts-pos' : (pts < 0 ? 'pts-neg' : 'pts-zero');
+  return `<span class="pts-cell ${cls}">${pts}</span>`;
+}
+
+// ── Afișează alerta structurată pentru meciuri amânate ──
+function displayPostponedAlert(filename, postponedGroups) {
+  const el = document.getElementById('postponed-log');
+  if (!el) return;
+  let html = `<div class="postponed-header">⚠️ Valori incomplete în <strong>${filename}</strong>:</div>`;
+  for (const group of postponedGroups) {
+    html += `<div class="postponed-bloc"><div class="postponed-match">Bloc ${group.bloc} | ${group.match}</div>`;
+    for (const e of group.entries) {
+      html += `<div class="postponed-entry">→ ${e.position}: <strong>${e.name}</strong> (${e.abbrev}) — coloana ${e.side} — valoare: <code>"${e.rawValue}"</code></div>`;
+    }
+    html += `</div>`;
+  }
+  html += `<div class="postponed-footer">Probabil meciuri amânate. Re-uploadează fișierul când scorurile sunt disponibile.</div>`;
+  el.style.display = 'block';
+  el.innerHTML += html;
+}
+
+// ── Player name cell — italic + tooltip dacă are meci amânat ──
+function playerNameCell(name, position) {
+  if (postponedPlayerNames.has(name.toUpperCase())) {
+    return `<span class="player-postponed" title="Meci amânat în cel puțin o etapă"><em>${name}</em>${posBadge(position)}</span>`;
+  }
+  return `<strong>${name}</strong>${posBadge(position)}`;
+}
+
+// ── Render Nebuliga team cell (logo + name, clickabil dacă liga e known) ──
+function nebuligaCell(teamName) {
+  const liga = teamLigaMap[teamName];
+  const hasLiga = liga !== undefined;
+  const oc = hasLiga ? `onclick="navigateToTeam(${liga}, '${(teamName || '').replace(/'/g, "\\'")}') "` : '';
+  const sty = hasLiga ? 'cursor:pointer;' : '';
+  return `<div class="cell-with-img" ${oc} style="${sty}">${teamLogoImg(teamName)}${teamName || '—'}</div>`;
+}
+
+// ── Navigate la pagina echipei ──
+function navigateToTeam(liga, teamName) {
+  showPage(`l${liga}-echipe`);
+  const sel = document.getElementById(`echipe-select-l${liga}`);
+  if (sel) { sel.value = teamName; renderEchipaCard(liga, teamName); }
+}
+
+// ── Render owner cell (photo + name) ──
+function ownerCell(teamName, ownerName) {
+  return `<div class="cell-with-img">${ownerPhotoImg(teamName)}${ownerName || '—'}</div>`;
+}
+
+// ── Render GK club name (full name from config) ──
+function gkClubCell(abbrev) {
+  return getClubFullName(abbrev);
+}
+
+// ══════════════════════════════════════════════════════
+// RENDER — Stat 1: Golgheterul Ligii
+// ══════════════════════════════════════════════════════
+function renderGolgheterLiga(liga, data, accentColor) {
+  const container = document.getElementById(`l${liga}-golgheter-content`);
+  if (!data.length) { container.innerHTML = emptyState('Nu sunt date suficiente.'); return; }
+
+  const rows = data.map((p, i) => `
+    <tr>
+      ${rankCell(i)}
+      <td class="left">${playerNameCell(p.name, p.position)}</td>
+      <td class="left" style="font-size:12px">${getClubFullName(p.abbrev)}</td>
+      <td class="left">${nebuligaCell(p.nebuligaTeam)}</td>
+      <td>${ptsCell(p.pts)}</td>
+      <td class="avg-cell">${p.appearances}</td>
+    </tr>`).join('');
+
+  container.innerHTML = `
+    <div class="card">
+      <div class="card-header"><h3>Top 15 Jucători de Câmp — Liga ${liga}</h3><span class="badge">Ca titular</span></div>
+      <div class="card-body scroll-table">
+        <table>
+          <thead><tr><th class="left">#</th><th class="left">Jucător</th><th class="left">Echipă reală</th><th class="left">Nebuliga</th><th>Pct</th><th>Meciuri</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// RENDER — Stats 2–4: Golgheteri Posturi
+// ══════════════════════════════════════════════════════
+function filterGolgheterPos(liga, pos) {
+  posFilters[liga] = pos;
+  const accentColor = liga === 1 ? 'var(--accent1)' : 'var(--accent2)';
+  renderGolgheterPozitii(liga, accentColor);
+}
+
+function renderGolgheterPozitii(liga, accentColor) {
+  const container = document.getElementById(`l${liga}-pozitii-content`);
+  const positions = [
+    { pos: 'ATACANT', label: 'Atacanți', icon: '⚽' },
+    { pos: 'MIJLOCAS', label: 'Mijlocași', icon: '⚡' },
+    { pos: 'FUNDAS', label: 'Fundași', icon: '🛡' }
+  ];
+  const currentPos = posFilters[liga];
+  const current = positions.find(p => p.pos === currentPos) || positions[0];
+
+  const selectorHtml = `
+    <div class="pos-selector">
+      ${positions.map(p => `<button class="pos-btn${p.pos === currentPos ? ' active' : ''}" onclick="filterGolgheterPos(${liga}, '${p.pos}')">${p.icon} ${p.label}</button>`).join('')}
+    </div>`;
+
+  const data = calcGolgheterPozitie(liga, currentPos);
+  let tableHtml;
+  if (!data.length) {
+    tableHtml = emptyState(`Fără date pentru ${current.label}.`);
+  } else {
+    const rows = data.map((p, i) => `
+      <tr>
+        ${rankCell(i)}
+        <td class="left">${playerNameCell(p.name, p.position)}</td>
+        <td class="left" style="font-size:12px">${getClubFullName(p.abbrev)}</td>
+        <td class="left">${nebuligaCell(p.nebuligaTeam)}</td>
+        <td>${ptsCell(p.pts)}</td>
+        <td class="avg-cell">${p.appearances}</td>
+      </tr>`).join('');
+    tableHtml = `
+      <div class="card">
+        <div class="card-header"><h3>${current.icon} Top 10 ${current.label} — Liga ${liga}</h3><span class="badge">Ca titular</span></div>
+        <div class="card-body scroll-table">
+          <table>
+            <thead><tr><th class="left">#</th><th class="left">Jucător</th><th class="left">Echipă reală</th><th class="left">Nebuliga</th><th>Pct</th><th>Meciuri</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  container.innerHTML = selectorHtml + tableHtml;
+}
+
+// ══════════════════════════════════════════════════════
+// RENDER — Stats 5 + 8: Portari
+// ══════════════════════════════════════════════════════
+function renderPortari(liga, ceiMaiBuni, portarulDeVis, accentColor) {
+  const container = document.getElementById(`l${liga}-portari-content`);
+
+  const rowsBuni = ceiMaiBuni.map((g, i) => `
+    <tr>
+      ${rankCell(i)}
+      <td class="left" style="font-size:12px">${getClubFullName(g.name)}</td>
+      <td class="left">${g.teamsArr.map(t => nebuligaCell(t)).join('<br>')}</td>
+      <td>${g.goalsConceded}</td>
+      <td>${g.appearances}</td>
+      <td><strong style="color:var(--success)">${g.avg.toFixed(2)}</strong></td>
+    </tr>`).join('');
+
+  const rowsVis = portarulDeVis.map((g, i) => `
+    <tr>
+      ${rankCell(i)}
+      <td class="left" style="font-size:12px">${getClubFullName(g.name)}</td>
+      <td class="left">${g.teamsArr.map(t => nebuligaCell(t)).join('<br>')}</td>
+      <td>${g.totalConceded}</td>
+      <td>${g.appearances}</td>
+      <td class="avg-cell">${g.avg.toFixed(2)}/meci</td>
+    </tr>`).join('');
+
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:20px;max-width:820px">
+      <div class="card">
+        <div class="card-header"><h3>🧤 Cei mai buni portari</h3><span class="badge">Medie ca titular ↓ mai mic = mai bun</span></div>
+        <div class="card-body scroll-table">
+          <table>
+            <thead><tr><th class="left">#</th><th class="left">Echipă reală</th><th class="left">Nebuliga</th><th>Gol. prim.</th><th>Et. tit.</th><th>Medie</th></tr></thead>
+            <tbody>${rowsBuni || '<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:20px">Fără date</td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>🌟 Portarul de Vis</h3><span class="badge">Total goluri primite ↓ mai mic = mai bun</span></div>
+        <div class="card-body scroll-table">
+          <table>
+            <thead><tr><th class="left">#</th><th class="left">Echipă reală</th><th class="left">Nebuliga</th><th>Gol. prim.</th><th>Etape</th><th>Medie</th></tr></thead>
+            <tbody>${rowsVis || '<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:20px">Fără date</td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// RENDER — Stat 6: Coeficient Inspiratie
+// ══════════════════════════════════════════════════════
+function renderInspiratieCoef(liga, data, accentColor) {
+  const container = document.getElementById(`l${liga}-inspiratie-content`);
+  if (!data.length) { container.innerHTML = emptyState('Ai nevoie de cel puțin 2 etape pentru a calcula coeficientul.'); return; }
+
+  const maxCoef = Math.max(...data.map(d => Math.abs(d.totalCoef)), 1);
+
+  const rows = data.map((d, i) => {
+    const coef = d.totalCoef;
+    const cls = coef > 0 ? 'pts-pos' : (coef < 0 ? 'pts-neg' : 'pts-zero');
+    const barW = Math.round((Math.abs(coef) / maxCoef) * 100);
+    const barCls = coef >= 0 ? 'coef-pos-fill' : 'coef-neg-fill';
+    return `
+      <tr>
+        ${rankCell(i)}
+        <td class="left">
+          <div class="cell-with-img">${teamLogoImg(d.teamName, 'lg')}<div><strong>${d.teamName}</strong><div class="coef-bar"><div class="coef-bar-fill ${barCls}" style="width:${barW}%"></div></div></div></div>
+        </td>
+        <td class="left">${ownerCell(d.teamName, d.owner)}</td>
+        <td class="right"><span class="pts-cell ${cls}">${coef > 0 ? '+' : ''}${coef}</span></td>
+      </tr>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="card" style="max-width:700px">
+      <div class="card-header"><h3>💡 Coeficientul de Inspirație — Liga ${liga}</h3><span class="badge">Total sezon</span></div>
+      <div class="card-body scroll-table">
+        <table>
+          <thead><tr><th>#</th><th class="left">Echipă</th><th class="left">Proprietar</th><th class="right">Coeficient</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// RENDER — Stat 7: Rezerva de Vis
+// ══════════════════════════════════════════════════════
+function renderRezervaDenVis(liga, data, accentColor) {
+  const container = document.getElementById(`l${liga}-rezerve-content`);
+  if (!data.length) { container.innerHTML = emptyState('Nu există date despre rezerve.'); return; }
+
+  const rows = data.map((p, i) => `
+    <tr>
+      ${rankCell(i)}
+      <td class="left">${playerNameCell(p.name, p.position)}</td>
+      <td class="left" style="font-size:12px">${getClubFullName(p.abbrev)}</td>
+      <td class="left">${nebuligaCell(p.nebuligaTeam)}</td>
+      <td class="right">${ptsCell(p.pts)}</td>
+      <td class="right avg-cell">${p.appearances} etape</td>
+    </tr>`).join('');
+
+  container.innerHTML = `
+    <div class="card" style="max-width:820px">
+      <div class="card-header"><h3>🪑 Rezerva de Plâns — Liga ${liga}</h3><span class="badge">Puncte exclusiv ca rezervă</span></div>
+      <div class="card-body scroll-table">
+        <table>
+          <thead><tr><th>#</th><th class="left">Jucător</th><th class="left">Echipă reală</th><th class="left">Nebuliga</th><th class="right">Puncte</th><th class="right">Apariții rezervă</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// CALC — Stat 9: Pagina echipei
+// ══════════════════════════════════════════════════════
+function calcEchipa(liga, teamName) {
+  const etapes = state.ligaData[liga].etapes;
+  const fieldStats = {};
+  const gkStats = {};
+  let owner = '';
+
+  for (const [etapa, etapeData] of Object.entries(etapes)) {
+    const td = etapeData[teamName];
+    if (!td) continue;
+    if (!owner && td.owner) owner = td.owner;
+
+    const titularNames = new Set(td.fieldTitulars.map(t => t.name.toUpperCase()));
+
+    for (const [name, lotEntry] of Object.entries(td.lot)) {
+      if (lotEntry.position === 'PORTAR') {
+        // Portari — cheia = abbrev (stabil cross-CSV)
+        const key = lotEntry.abbrev || name;
+        // Matcher: name-ul din lot (uppercase) vs gkTitular (uppercase)
+        const isStarter = name === td.gkTitular;
+        if (!gkStats[key]) gkStats[key] = { key, abbrev: lotEntry.abbrev, starterApps: 0, starterConceded: 0, reserveApps: 0, reserveConceded: 0 };
+        if (isStarter) {
+          gkStats[key].starterApps++;
+          gkStats[key].starterConceded += td.gkConceded;
+        } else {
+          gkStats[key].reserveApps++;
+          gkStats[key].reserveConceded += lotEntry.pts;
+        }
+      } else {
+        // Jucători de câmp
+        const uname = name.toUpperCase();
+        if (!fieldStats[uname]) {
+          fieldStats[uname] = { name: uname, abbrev: lotEntry.abbrev, position: lotEntry.position, starterApps: 0, starterPts: 0, reserveApps: 0, reservePts: 0 };
+        }
+        if (titularNames.has(uname)) {
+          fieldStats[uname].starterApps++;
+          fieldStats[uname].starterPts += lotEntry.pts;
+        } else {
+          fieldStats[uname].reserveApps++;
+          fieldStats[uname].reservePts += lotEntry.pts;
+        }
+      }
+    }
+  }
+
+  // Clasament — ultima etapă disponibilă
+  const clasData = state.clasament[liga];
+  const etapaKeys = Object.keys(clasData).map(Number).sort((a, b) => b - a);
+  let currentPos = null, currentPts = null;
+  if (etapaKeys.length > 0) {
+    const entry = (clasData[etapaKeys[0]] || []).find(e => e.team === teamName);
+    if (entry) { currentPos = entry.position; currentPts = entry.pts; }
+  }
+
+  // Coeficient de inspirație
+  const coefData = calcCoeficientInspiratiei(liga);
+  const coefEntry = coefData.find(c => c.teamName === teamName);
+  const coefTotal = coefEntry !== undefined ? coefEntry.totalCoef : null;
+
+  const fieldPlayers = Object.values(fieldStats);
+  const bestScorer = [...fieldPlayers].filter(p => p.starterPts > 0).sort((a, b) => b.starterPts - a.starterPts)[0] || null;
+  const bestReserve = [...fieldPlayers].filter(p => p.reservePts > 0).sort((a, b) => b.reservePts - a.reservePts)[0] || null;
+
+  return { owner, fieldPlayers, gkPlayers: Object.values(gkStats), currentPos, currentPts, coefTotal, bestScorer, bestReserve };
+}
+
+// ══════════════════════════════════════════════════════
+// RENDER — Stat 9: Pagina echipei
+// ══════════════════════════════════════════════════════
+function renderEchipePage(liga, accentColor) {
+  const container = document.getElementById(`l${liga}-echipe-content`);
+  const etapes = state.ligaData[liga].etapes;
+  if (!Object.keys(etapes).length) {
+    container.innerHTML = emptyState('Nu există date pentru Liga ' + liga + '.');
+    return;
+  }
+  const allTeams = new Set();
+  for (const etapaData of Object.values(etapes)) Object.keys(etapaData).forEach(t => allTeams.add(t));
+  const sortedTeams = [...allTeams].sort();
+  const options = sortedTeams.map(t => `<option value="${t}">${t}</option>`).join('');
+  container.innerHTML = `
+    <div class="echipa-selector">
+      <label>Selectează echipa:</label>
+      <select id="echipe-select-l${liga}" onchange="renderEchipaCard(${liga}, this.value)">
+        ${options}
+      </select>
+    </div>
+    <div id="echipa-card-l${liga}"></div>`;
+  if (sortedTeams.length > 0) renderEchipaCard(liga, sortedTeams[0]);
+}
+
+function renderEchipaCard(liga, teamName) {
+  const container = document.getElementById(`echipa-card-l${liga}`);
+  if (!container) return;
+  const data = calcEchipa(liga, teamName);
+  const accentColor = liga === 1 ? 'var(--accent1)' : 'var(--accent2)';
+  const tc = getTeamConfig(teamName);
+
+  const posDisplay = data.currentPos !== null ? `#${data.currentPos}` : '—';
+  const ptsDisplay = data.currentPts !== null ? `${data.currentPts} pct.` : '—';
+  const coefVal = data.coefTotal;
+  const coefDisplay = coefVal !== null
+    ? `<span style="color:${coefVal >= 0 ? 'var(--success)' : 'var(--danger)'}">${coefVal >= 0 ? '+' : ''}${coefVal}</span>`
+    : '—';
+
+  const ownerDisplay = data.owner || (tc ? tc.owner_name_full : '') || '—';
+
+  // Portari
+  const gkRows = data.gkPlayers.map(g => `
+    <tr>
+      <td class="left"><strong>${getClubFullName(g.abbrev)}</strong> ${posBadge('PORTAR')}</td>
+      <td class="left" style="font-size:11px;color:var(--text2)">${g.abbrev}</td>
+      <td>${g.starterApps}</td>
+      <td><span style="color:var(--danger)">${g.starterConceded > 0 ? '-' + g.starterConceded : '0'}</span></td>
+      <td>${g.reserveApps}</td>
+      <td><span style="color:var(--text2);font-size:12px">${g.reserveConceded > 0 ? '-' + g.reserveConceded : '0'}</span></td>
+      <td><span style="color:var(--danger);font-weight:700">${-(g.starterConceded + g.reserveConceded)}</span></td>
+    </tr>`).join('');
+
+  // Jucători de câmp — sortați descrescător după total puncte
+  const fieldRows = data.fieldPlayers
+    .sort((a, b) => (b.starterPts + b.reservePts) - (a.starterPts + a.reservePts) || b.starterApps - a.starterApps)
+    .map(p => `
+    <tr>
+      <td class="left">${playerNameCell(p.name, p.position)}</td>
+      <td class="left" style="font-size:12px">${getClubFullName(p.abbrev)}</td>
+      <td>${p.starterApps}</td>
+      <td>${ptsCell(p.starterPts)}</td>
+      <td>${p.reserveApps}</td>
+      <td>${ptsCell(p.reservePts)}</td>
+      <td><strong>${ptsCell(p.starterPts + p.reservePts)}</strong></td>
+    </tr>`).join('');
+
+  container.innerHTML = `
+    <div class="card echipa-main-card" style="margin-bottom:20px">
+      <div class="echipa-hero">
+        <div class="echipa-hero-logo">
+          ${tc && tc.logo ? `<img src="${tc.logo}" class="team-logo-xl" onerror="this.style.display='none'">` : '<div class="placeholder-logo">🏟️</div>'}
+        </div>
+        <div class="echipa-hero-info">
+          <div class="echipa-hero-name" style="color:${accentColor}">${teamName}</div>
+          <div class="echipa-hero-owner">
+            ${tc && tc.owner_photo ? `<img src="${tc.owner_photo}" class="owner-photo" onerror="this.style.display='none'">` : ''}
+            ${ownerDisplay}
+          </div>
+          <div class="echipa-stats-row">
+            <div class="echipa-stat">
+              <span class="echipa-stat-label">Loc curent</span>
+              <span class="echipa-stat-val" style="color:${accentColor}">${posDisplay}</span>
+            </div>
+            <div class="echipa-stat">
+              <span class="echipa-stat-label">Puncte reale</span>
+              <span class="echipa-stat-val">${ptsDisplay}</span>
+            </div>
+            <div class="echipa-stat">
+              <span class="echipa-stat-label">Coef. Inspirație</span>
+              <span class="echipa-stat-val">${coefDisplay}</span>
+            </div>
+            <div class="echipa-stat">
+              <span class="echipa-stat-label">Golgheter</span>
+              <span class="echipa-stat-val" style="font-size:13px;line-height:1.3">
+                ${data.bestScorer ? `${data.bestScorer.name}<br><span style="color:var(--text2);font-size:11px;font-weight:400">${data.bestScorer.starterPts} pct. ca titular</span>` : '—'}
+              </span>
+            </div>
+            <div class="echipa-stat">
+              <span class="echipa-stat-label">Rezerva de Plâns</span>
+              <span class="echipa-stat-val" style="font-size:13px;line-height:1.3">
+                ${data.bestReserve ? `${data.bestReserve.name}<br><span style="color:var(--text2);font-size:11px;font-weight:400">${data.bestReserve.reservePts} pct. ca rezervă</span>` : '—'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>📋 Lotul — ${teamName}</h3><span class="badge">Sezon complet</span></div>
+      <div class="card-body scroll-table">
+        <table>
+          <thead>
+            <tr>
+              <th class="left">Jucător / Portar</th>
+              <th class="left">Club real</th>
+              <th title="Etape ca titular">Tit.</th>
+              <th title="Puncte ca titular (sau goluri primite pt. portari)">Pct. Tit.</th>
+              <th title="Etape ca rezervă">Rez.</th>
+              <th title="Puncte ca rezervă">Pct. Rez.</th>
+              <th title="Total puncte / goluri">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${gkRows}
+            ${fieldRows}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// RENDER — Clasament cu Time Slider
+// ══════════════════════════════════════════════════════
+function renderClasamentChart(liga, accentColor) {
+  const container = document.getElementById(`l${liga}-clasament-content`);
+  const clasData = state.clasament[liga];
+  const etapes = Object.keys(clasData).map(Number).sort((a, b) => a - b);
+
+  if (!etapes.length) {
+    container.innerHTML = emptyState('Încarcă fișierele de clasament pentru a vedea evoluția.');
+    return;
+  }
+
+  const allTeams = {};
+  for (const et of etapes) {
+    for (const entry of clasData[et]) allTeams[entry.team] = entry.owner;
+  }
+  const teamNames = Object.keys(allTeams);
+
+  const colors = generateColors(teamNames.length);
+  const datasets = teamNames.map((team, idx) => ({
+    label: team,
+    data: etapes.map(et => {
+      const entry = clasData[et].find(e => e.team === team);
+      return entry ? entry.position : null;
+    }),
+    borderColor: colors[idx],
+    backgroundColor: colors[idx] + '30',
+    tension: 0.3,
+    fill: false,
+    spanGaps: true,
+    pointRadius: 4,
+    pointHoverRadius: 6,
+    borderWidth: 2
+  }));
+
+  const chartId = `chart-l${liga}`;
+  if (chartInstances[chartId]) { chartInstances[chartId].destroy(); delete chartInstances[chartId]; }
+
+  // Default slider position: ultima etapă
+  if (sliderState[liga] === null || !etapes.includes(sliderState[liga])) {
+    sliderState[liga] = etapes[etapes.length - 1];
+  }
+
+  container.innerHTML = `
+    <div class="chart-wrap">
+      <div class="chart-title">📈 Evoluție Clasament — Liga ${liga}</div>
+      <canvas id="${chartId}"></canvas>
+    </div>
+    <div class="slider-wrap">
+      <label>Etapă afișată în tabel:</label>
+      <input type="range" id="slider-l${liga}" min="${etapes[0]}" max="${etapes[etapes.length-1]}" step="1" value="${sliderState[liga]}"
+        list="slider-ticks-l${liga}"
+        oninput="onSliderChange(${liga}, this.value, ${JSON.stringify(etapes)})">
+      <datalist id="slider-ticks-l${liga}">
+        <option value="5"></option>
+        <option value="10"></option>
+        <option value="15"></option>
+        <option value="20"></option>
+        <option value="25"></option>
+      </datalist>
+      <span class="slider-etapa-badge" id="slider-label-l${liga}">Etapa ${sliderState[liga]}</span>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3 id="standings-title-l${liga}">Clasament — Etapa ${sliderState[liga]}</h3></div>
+      <div class="card-body scroll-table" id="standings-table-l${liga}">
+        ${renderStandingsForEtapa(clasData, sliderState[liga], liga)}
+      </div>
+    </div>`;
+
+  const ctx = document.getElementById(chartId).getContext('2d');
+  chartInstances[chartId] = new Chart(ctx, {
+    type: 'line',
+    data: { labels: etapes.map(e => `Et. ${e}`), datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          reverse: true,
+          min: 1, max: 16,
+          ticks: { stepSize: 1, color: '#8888aa', font: { size: 11 } },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          title: { display: true, text: 'Poziție', color: '#8888aa', font: { size: 11 } }
+        },
+        x: {
+          ticks: { color: '#8888aa', font: { size: 11 } },
+          grid: { color: 'rgba(255,255,255,0.05)' }
+        }
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: { color: '#e8e8f0', font: { size: 11 }, padding: 12, boxWidth: 12 }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: Loc ${ctx.raw}`
+          }
+        }
+      }
+    }
+  });
+}
+
+function onSliderChange(liga, val, etapes) {
+  const et = parseInt(val);
+  // Find nearest available etapa
+  const nearest = etapes.reduce((prev, curr) => Math.abs(curr - et) < Math.abs(prev - et) ? curr : prev);
+  sliderState[liga] = nearest;
+
+  document.getElementById(`slider-label-l${liga}`).textContent = `Etapa ${nearest}`;
+  document.getElementById(`standings-title-l${liga}`).textContent = `Clasament — Etapa ${nearest}`;
+  document.getElementById(`standings-table-l${liga}`).innerHTML =
+    renderStandingsForEtapa(state.clasament[liga], nearest, liga);
+}
+
+function getStandingsRowClass(pos, liga) {
+  if (liga === 1) {
+    if (pos <= 5) return 'row-top5';
+    if (pos >= 12) return 'row-relegation';
+  } else {
+    if (pos <= 5) return 'row-promotion';
+  }
+  return '';
+}
+
+function renderStandingsForEtapa(clasData, etapa, liga) {
+  const standings = [...(clasData[etapa] || [])].sort((a, b) => a.position - b.position);
+  if (!standings.length) return `<div class="empty-state"><p>Fără date pentru etapa ${etapa}.</p></div>`;
+
+  const rows = standings.map((s, i) => {
+    const rowClass = getStandingsRowClass(s.position, liga);
+    // Săgeată retrogradare / promovare
+    let arrow = '';
+    if (liga === 1 && s.position >= 12) arrow = `<span style="color:var(--danger);margin-left:5px;font-size:12px">↓</span>`;
+    if (liga === 2 && s.position <= 5) arrow = `<span style="color:var(--success);margin-left:5px;font-size:12px">↑</span>`;
+
+    return `
+    <tr class="${rowClass}">
+      ${rankCell(i)}
+      <td class="left">
+        <div class="cell-with-img">${teamLogoImg(s.team)}<strong>${s.team}</strong>${arrow}</div>
+      </td>
+      <td class="left">${ownerCell(s.team, s.owner)}</td>
+      <td>${s.played}</td>
+      <td style="color:var(--success)">${s.wins}</td>
+      <td style="color:var(--warn)">${s.draws}</td>
+      <td style="color:var(--danger)">${s.losses}</td>
+      <td>${s.goalsFor}–${s.goalsAgainst}</td>
+      <td><strong>${s.points}</strong></td>
+    </tr>`;
+  }).join('');
+
+  const legendL1 = liga === 1 ? `
+    <div style="display:flex;gap:16px;padding:12px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--text2)">
+      <span><span style="display:inline-block;width:10px;height:10px;background:rgba(79,219,139,0.3);border-radius:2px;margin-right:4px"></span>Locuri 1–5: Premii</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:rgba(247,79,106,0.3);border-radius:2px;margin-right:4px"></span>Locuri 12–16: Retrogradare Liga 2 ↓</span>
+    </div>` : '';
+  const legendL2 = liga === 2 ? `
+    <div style="display:flex;gap:16px;padding:12px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--text2)">
+      <span><span style="display:inline-block;width:10px;height:10px;background:rgba(79,219,139,0.4);border-radius:2px;margin-right:4px"></span>Locuri 1–5: Promovare Liga 1 + Premii ↑</span>
+    </div>` : '';
+
+  return `<table>
+    <thead><tr><th class="left">#</th><th class="left">Echipă</th><th class="left">Proprietar</th><th>J</th><th>V</th><th>E</th><th>Î</th><th>Gol.</th><th>Pct</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>${legendL1}${legendL2}`;
+}
+
+// ══════════════════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════════════════
+function generateColors(n) {
+  const colors = [];
+  for (let i = 0; i < n; i++) {
+    const h = Math.round((i / n) * 360);
+    colors.push(`hsl(${h}, 70%, 60%)`);
+  }
+  return colors;
+}
+
+// config este embedded ca variabilă — gata la pornire, fără fetch.
+</script>
+</body>
+</html>
