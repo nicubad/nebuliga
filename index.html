@@ -125,7 +125,7 @@
   /* ── Chart container ── */
   .chart-wrap { position: relative; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 24px; }
   .chart-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
-  .chart-wrap canvas { height: 380px; width: 100%; }
+  .chart-wrap canvas { max-height: 380px; }
 
   /* ── Time Slider ── */
   .slider-wrap { display: flex; align-items: center; gap: 14px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 18px; margin-bottom: 16px; }
@@ -149,6 +149,14 @@
   .echipa-stat { background: var(--card2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; min-width: 120px; }
   .echipa-stat-label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text2); margin-bottom: 4px; }
   .echipa-stat-val { display: block; font-size: 16px; font-weight: 700; }
+
+  /* ── Echipa lot table — separatoare compartiment ── */
+  .pos-group-sep td { background: rgba(255,255,255,0.04); font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text2); padding: 5px 14px; border-top: 2px solid var(--border); font-weight: 700; }
+  .sort-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 10px 14px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+  .sort-bar span { font-size: 11px; color: var(--text2); margin-right: 4px; white-space: nowrap; }
+  .sort-btn { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--text2); cursor: pointer; font-size: 11px; transition: all 0.15s; }
+  .sort-btn:hover { color: var(--text); border-color: var(--accent1); }
+  .sort-btn.active { background: rgba(79,142,247,0.15); color: var(--accent1); border-color: var(--accent1); font-weight: 600; }
 
   /* ── Coef table ── */
   .coef-bar { height: 6px; border-radius: 3px; background: var(--border); margin-top: 4px; }
@@ -538,8 +546,7 @@
     }
 
     .chart-wrap canvas {
-      height: 220px !important;  /* înălțimea efectivă a canvas-ului */
-      width: 100% !important;
+      max-height: 220px;
     }
 
   } /* end @media mobile */
@@ -552,8 +559,7 @@
     }
 
     .chart-wrap canvas {
-      height: 290px !important;
-      width: 100% !important;
+      max-height: 290px;
     }
 
   } /* end @media tablet */
@@ -774,7 +780,7 @@ function getClubLogoImg(abbrev) {
   if (!abbrev) return '';
   const overrides = config.club_logo_files || {};
   const filename = overrides[abbrev] || abbrev;
-  return `<img src="images/clubs/${filename}.png" alt="" class="club-logo-sm" onerror="this.style.display='none'">`;
+  return `<img src="images/${filename}.png" alt="" class="club-logo-sm" onerror="this.style.display='none'">`;
 }
 
 function getPlayerFullName(name) {
@@ -1491,8 +1497,7 @@ function renderGolgheterPozitii(liga, accentColor) {
     const rows = data.map((p, i) => `
       <tr>
         ${rankCell(i)}
-        <td class="left">${playerNameCell(p.name, p.position)}</td>
-        <td class="left" style="font-size:12px">${getClubFullName(p.abbrev)}</td>
+        <td class="left">${playerNameCell(p.name, p.position, p.abbrev)}</td>
         <td class="left">${nebuligaCell(p.nebuligaTeam)}</td>
         <td>${ptsCell(p.pts)}</td>
         <td class="avg-cell">${p.appearances}</td>
@@ -1747,18 +1752,46 @@ function renderEchipaCard(liga, teamName) {
       <td><span style="color:var(--danger);font-weight:700">${-(g.starterConceded + g.reserveConceded)}</span></td>
     </tr>`).join('');
 
-  // Jucători de câmp — sortați descrescător după total puncte
-  const fieldRows = data.fieldPlayers
-    .sort((a, b) => (b.starterPts + b.reservePts) - (a.starterPts + a.reservePts) || b.starterApps - a.starterApps)
-    .map(p => `
-    <tr>
+  // Jucători de câmp — sortare configurabilă
+  const POS_ORDER = { FUNDAS: 1, MIJLOCAS: 2, ATACANT: 3 };
+  const POS_LABELS = { FUNDAS: '🛡️ Fundași', MIJLOCAS: '⚡ Mijlocași', ATACANT: '⚽ Atacanți' };
+  const currentSort = (window._echipaSort || {})[liga] || 'position';
+
+  const sortFns = {
+    position:   (a, b) => (POS_ORDER[a.position]||9) - (POS_ORDER[b.position]||9) || b.starterPts - a.starterPts,
+    starterApps:(a, b) => b.starterApps - a.starterApps || b.starterPts - a.starterPts,
+    starterPts: (a, b) => b.starterPts - a.starterPts || b.starterApps - a.starterApps,
+    reserveApps:(a, b) => b.reserveApps - a.reserveApps || b.reservePts - a.reservePts,
+    reservePts: (a, b) => b.reservePts - a.reservePts || b.reserveApps - a.reserveApps,
+  };
+
+  const sortedField = [...data.fieldPlayers].sort(sortFns[currentSort] || sortFns.position);
+  let lastPos = null;
+  const fieldRows = sortedField.map(p => {
+    let sep = '';
+    if (currentSort === 'position' && p.position !== lastPos) {
+      lastPos = p.position;
+      sep = `<tr class="pos-group-sep"><td colspan="6">${POS_LABELS[p.position] || p.position}</td></tr>`;
+    }
+    return sep + `<tr>
       <td class="left">${playerNameCell(p.name, p.position, p.abbrev)}</td>
       <td>${p.starterApps}</td>
       <td>${ptsCell(p.starterPts)}</td>
       <td>${p.reserveApps}</td>
       <td>${ptsCell(p.reservePts)}</td>
       <td><strong>${ptsCell(p.starterPts + p.reservePts)}</strong></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
+
+  const sortBtns = [
+    ['position',    'Poziție (implicit)'],
+    ['starterApps', 'Meciuri titular'],
+    ['starterPts',  'Puncte titular'],
+    ['reserveApps', 'Meciuri rezervă'],
+    ['reservePts',  'Puncte rezervă'],
+  ].map(([key, label]) =>
+    `<button class="sort-btn${currentSort === key ? ' active' : ''}" onclick="setEchipaSort(${liga},'${key}')">${label}</button>`
+  ).join('');
 
   container.innerHTML = `
     <div class="card echipa-main-card" style="margin-bottom:20px">
@@ -1804,12 +1837,12 @@ function renderEchipaCard(liga, teamName) {
 
     <div class="card">
       <div class="card-header"><h3>📋 Lotul — ${teamName}</h3><span class="badge">Sezon complet</span></div>
+      <div class="sort-bar"><span>Sortare:</span>${sortBtns}</div>
       <div class="card-body scroll-table">
         <table>
           <thead>
             <tr>
               <th class="left">Jucător / Portar</th>
-              <th class="left">Club real</th>
               <th title="Etape ca titular">Tit.</th>
               <th title="Puncte ca titular (sau goluri primite pt. portari)">Pct. Tit.</th>
               <th title="Etape ca rezervă">Rez.</th>
@@ -1902,7 +1935,7 @@ function renderClasamentChart(liga, accentColor) {
     data: { labels: etapes.map(e => `Et. ${e}`), datasets },
     options: {
       responsive: true,
-      maintainAspectRatio: false,
+      maintainAspectRatio: true,
       scales: {
         y: {
           reverse: true,
@@ -2007,6 +2040,13 @@ function generateColors(n) {
     colors.push(`hsl(${h}, 70%, 60%)`);
   }
   return colors;
+}
+
+window._echipaSort = {};
+function setEchipaSort(liga, sortKey) {
+  window._echipaSort[liga] = sortKey;
+  const sel = document.getElementById(`echipe-select-l${liga}`);
+  if (sel && sel.value) renderEchipaCard(liga, sel.value);
 }
 
 // config este embedded ca variabilă — gata la pornire, fără fetch.
