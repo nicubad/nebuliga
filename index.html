@@ -658,6 +658,21 @@
 
     <button class="btn btn-primary" id="calc-btn" onclick="calculateAll()" disabled>⚡ Calculează statisticile</button>
     <button class="btn btn-danger btn-sm" style="margin-left:10px" onclick="resetAll()">🗑 Reset</button>
+
+    <!-- ── Diagnostic grid ── -->
+    <div id="diagnostic-panel" style="margin-top:28px;display:none">
+      <div style="font-size:15px;font-weight:700;margin-bottom:12px">🔍 Diagnostic fișiere per etapă</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:12px;color:var(--text2)">
+        <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#4fdb8b;opacity:0.85;vertical-align:middle;margin-right:4px"></span>Ambele fișiere OK</span>
+        <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#4f8ef7;opacity:0.85;vertical-align:middle;margin-right:4px"></span>Doar lot</span>
+        <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#a855f7;opacity:0.85;vertical-align:middle;margin-right:4px"></span>Doar clasament</span>
+        <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#f74f6a;opacity:0.85;vertical-align:middle;margin-right:4px"></span>Eroare parsare</span>
+        <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(255,255,255,0.08);vertical-align:middle;margin-right:4px"></span>Lipsă</span>
+        <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.12);vertical-align:middle;margin-right:4px"></span>Gap așteptat (E4)</span>
+      </div>
+      <div id="diag-l1" style="margin-bottom:18px"></div>
+      <div id="diag-l2"></div>
+    </div>
   </div>
 
   <!-- ══ LIGA 1 — Golgheterul Ligii ══ -->
@@ -985,6 +1000,100 @@ function updateUploadUI() {
 
   const hasData = loturi.length > 0;
   document.getElementById('calc-btn').disabled = !hasData;
+
+  renderDiagnostic();
+}
+
+function renderDiagnostic() {
+  const panel = document.getElementById('diagnostic-panel');
+  if (!panel) return;
+
+  // Construim index rapid: { `lot-L-E`: status, `clas-L-E`: status }
+  const idx = {};
+  state.files.forEach(f => {
+    if (f.type === 'loturi')    idx[`lot-${f.liga}-${f.etapa}`]  = f.status; // ok/warn/err
+    if (f.type === 'clasament') idx[`clas-${f.liga}-${f.etapa}`] = f.status;
+  });
+
+  const EXPECTED_GAP = 4; // etapa 4 lipsește prin design
+  const MAX_ETAPA = 31;
+
+  function buildGrid(liga) {
+    const accentColor = liga === 1 ? 'var(--accent1)' : 'var(--accent2)';
+    let html = `<div style="font-size:13px;font-weight:600;color:${accentColor};margin-bottom:8px">Liga ${liga}</div>`;
+    html += `<div style="display:flex;flex-wrap:wrap;gap:5px">`;
+    for (let et = 1; et <= MAX_ETAPA; et++) {
+      const lotStatus  = idx[`lot-${liga}-${et}`];
+      const clasStatus = idx[`clas-${liga}-${et}`];
+      const hasLot  = !!lotStatus;
+      const hasClas = !!clasStatus;
+      const hasErr  = lotStatus === 'err' || clasStatus === 'err';
+
+      let bg, title;
+      if (et === EXPECTED_GAP) {
+        bg = 'rgba(255,255,255,0.03)';
+        title = 'Etapa 4 — gap acceptat (lipsește din date)';
+      } else if (hasErr) {
+        bg = 'rgba(247,79,106,0.7)';
+        const errPart = [lotStatus==='err'?'lot':null, clasStatus==='err'?'clasament':null].filter(Boolean).join(' + ');
+        title = `E${et} — EROARE parsare (${errPart})`;
+      } else if (hasLot && hasClas) {
+        bg = 'rgba(79,219,139,0.75)';
+        const warnPart = [lotStatus==='warn'?'lot cu avertismente':null].filter(Boolean).join('');
+        title = `E${et} — Ambele fișiere OK${warnPart ? ' ('+warnPart+')' : ''}`;
+      } else if (hasLot && !hasClas) {
+        bg = 'rgba(79,142,247,0.75)';
+        title = `E${et} — Doar lot încărcat (lipsește clasament)`;
+      } else if (!hasLot && hasClas) {
+        bg = 'rgba(168,85,247,0.75)';
+        title = `E${et} — Doar clasament încărcat (lipsește lot)`;
+      } else {
+        bg = 'rgba(255,255,255,0.07)';
+        title = `E${et} — Niciun fișier încărcat`;
+      }
+
+      const borderStyle = et === EXPECTED_GAP ? 'border:1px dashed rgba(255,255,255,0.15);' : '';
+      const textColor   = (hasErr || hasLot || hasClas) && et !== EXPECTED_GAP ? '#fff' : 'var(--text2)';
+      html += `<div title="${title}" style="width:36px;height:36px;border-radius:6px;background:${bg};${borderStyle}display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${textColor};cursor:default;user-select:none">${et}</div>`;
+    }
+    html += `</div>`;
+    return html;
+  }
+
+  // Calculăm câte lipsesc (excl. gap E4)
+  function countMissing(liga) {
+    let missing = 0;
+    for (let et = 1; et <= MAX_ETAPA; et++) {
+      if (et === EXPECTED_GAP) continue;
+      if (!idx[`lot-${liga}-${et}`] && !idx[`clas-${liga}-${et}`]) missing++;
+    }
+    return missing;
+  }
+
+  const total = (MAX_ETAPA - 1) * 2 * 2; // etape × ligi × tipuri
+  const loaded = state.files.filter(f => f.type !== 'unknown').length;
+  const m1 = countMissing(1), m2 = countMissing(2);
+
+  panel.style.display = 'block';
+  document.getElementById('diag-l1').innerHTML = buildGrid(1);
+  document.getElementById('diag-l2').innerHTML = buildGrid(2);
+
+  // Sumarul de sub grilă
+  let summaryEl = document.getElementById('diag-summary');
+  if (!summaryEl) {
+    summaryEl = document.createElement('div');
+    summaryEl.id = 'diag-summary';
+    summaryEl.style.cssText = 'margin-top:14px;font-size:12px;color:var(--text2)';
+    panel.appendChild(summaryEl);
+  }
+  const warnLines = [];
+  if (m1 > 0) warnLines.push(`⚠️ Liga 1: ${m1} etapă/e fără niciun fișier`);
+  if (m2 > 0) warnLines.push(`⚠️ Liga 2: ${m2} etapă/e fără niciun fișier`);
+  const errFiles = state.files.filter(f => f.status === 'err');
+  if (errFiles.length) warnLines.push(`❌ ${errFiles.length} fișier(e) cu eroare de parsare: ${errFiles.map(f=>`E${f.etapa} L${f.liga} (${f.type})`).join(', ')}`);
+  summaryEl.innerHTML = warnLines.length
+    ? warnLines.map(l => `<div style="margin-bottom:4px">${l}</div>`).join('')
+    : `<div style="color:var(--success)">✅ Toate etapele disponibile au cel puțin un fișier încărcat.</div>`;
 }
 
 function resetAll() {
