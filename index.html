@@ -159,6 +159,13 @@
   .empty-state { padding: 40px; text-align: center; color: var(--text2); }
   .empty-state .icon { font-size: 36px; margin-bottom: 12px; }
 
+  /* ── Auto-load progress ── */
+  #autoload-progress { background: rgba(79,142,247,0.08); border: 1px solid rgba(79,142,247,0.25); border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; display: none; }
+  .autoload-text { font-size: 13px; color: var(--accent1); margin-bottom: 10px; font-weight: 600; }
+  .autoload-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .autoload-bar-fill { height: 100%; width: 0%; background: var(--accent1); border-radius: 3px; transition: width 0.2s ease; }
+  .autoload-done { color: var(--success) !important; }
+
   /* ── Errors ── */
   #error-log { background: rgba(247,79,106,0.08); border: 1px solid rgba(247,79,106,0.2); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; display: none; }
   #error-log h4 { color: var(--danger); font-size: 13px; margin-bottom: 6px; }
@@ -591,6 +598,10 @@
 
     <div id="config-banner"></div>
     <div id="error-log"><h4>⚠ Erori de parsare</h4><ul id="error-list"></ul></div>
+    <div id="autoload-progress">
+      <div class="autoload-text">Se încarcă datele din repository...</div>
+      <div class="autoload-bar"><div class="autoload-bar-fill"></div></div>
+    </div>
     <div id="postponed-log"></div>
 
     <div id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
@@ -801,42 +812,83 @@ function handleFiles(files) {
   Promise.all(tasks).then(updateUploadUI);
 }
 
+function processFileText(filename, text) {
+  const info = parseFilename(filename);
+  if (!info) {
+    state.files.push({ name: filename, type: 'unknown', status: 'err', message: 'Nume fișier nerecunoscut' });
+    return;
+  }
+  try {
+    if (info.isLoturi) {
+      const { teams, warnings, postponedGroups } = parseLotCSV(text, info.etapa, info.liga);
+      if (!state.ligaData[info.liga].etapes[info.etapa]) state.ligaData[info.liga].etapes[info.etapa] = {};
+      teams.forEach(t => { state.ligaData[info.liga].etapes[info.etapa][t.teamName] = t; });
+      const warnMsg = warnings.length ? ` (⚠ ${warnings.join('; ')})` : '';
+      const hasPostp = postponedGroups && postponedGroups.length > 0;
+      if (hasPostp) {
+        for (const group of postponedGroups)
+          for (const entry of group.entries) postponedPlayerNames.add(entry.name.toUpperCase());
+        displayPostponedAlert(filename, postponedGroups);
+      }
+      state.files.push({ name: filename, type: 'loturi', liga: info.liga, etapa: info.etapa, status: (warnings.length || hasPostp) ? 'warn' : 'ok', message: `${teams.length} echipe parsate${warnMsg}${hasPostp ? ' — conține valori amânate ⏸️' : ''}` });
+    } else if (info.isClasament) {
+      const standings = parseClasamentCSV(text, info.etapa, info.liga);
+      state.clasament[info.liga][info.etapa] = standings;
+      state.files.push({ name: filename, type: 'clasament', liga: info.liga, etapa: info.etapa, status: 'ok', message: `${standings.length} echipe` });
+    }
+  } catch (err) {
+    state.errors.push(`${filename}: ${err.message}`);
+    state.files.push({ name: filename, type: info.isLoturi ? 'loturi' : 'clasament', liga: info.liga, etapa: info.etapa, status: 'err', message: err.message });
+  }
+}
+
 function processFile(file) {
   return new Promise(resolve => {
-    const info = parseFilename(file.name);
-    if (!info) {
-      state.files.push({ name: file.name, type: 'unknown', status: 'err', message: 'Nume fișier nerecunoscut' });
-      return resolve();
-    }
     const reader = new FileReader();
-    reader.onload = e => {
-      const text = e.target.result;
-      try {
-        if (info.isLoturi) {
-          const { teams, warnings, postponedGroups } = parseLotCSV(text, info.etapa, info.liga);
-          if (!state.ligaData[info.liga].etapes[info.etapa]) state.ligaData[info.liga].etapes[info.etapa] = {};
-          teams.forEach(t => { state.ligaData[info.liga].etapes[info.etapa][t.teamName] = t; });
-          const warnMsg = warnings.length ? ` (⚠ ${warnings.join('; ')})` : '';
-          const hasPostp = postponedGroups && postponedGroups.length > 0;
-          if (hasPostp) {
-            for (const group of postponedGroups)
-              for (const entry of group.entries) postponedPlayerNames.add(entry.name.toUpperCase());
-            displayPostponedAlert(file.name, postponedGroups);
-          }
-          state.files.push({ name: file.name, type: 'loturi', liga: info.liga, etapa: info.etapa, status: (warnings.length || hasPostp) ? 'warn' : 'ok', message: `${teams.length} echipe parsate${warnMsg}${hasPostp ? ' — conține valori amânate ⏸️' : ''}` });
-        } else if (info.isClasament) {
-          const standings = parseClasamentCSV(text, info.etapa, info.liga);
-          state.clasament[info.liga][info.etapa] = standings;
-          state.files.push({ name: file.name, type: 'clasament', liga: info.liga, etapa: info.etapa, status: 'ok', message: `${standings.length} echipe` });
-        }
-      } catch (err) {
-        state.errors.push(`${file.name}: ${err.message}`);
-        state.files.push({ name: file.name, type: info.isLoturi ? 'loturi' : 'clasament', liga: info.liga, etapa: info.etapa, status: 'err', message: err.message });
-      }
-      resolve();
-    };
+    reader.onload = e => { processFileText(file.name, e.target.result); resolve(); };
     reader.readAsText(file, 'UTF-8');
   });
+}
+
+async function autoLoadFromRepo() {
+  if (window.location.protocol === 'file:') return; // Nu merge fără server HTTP
+
+  const filenames = [];
+  for (const liga of [1, 2]) {
+    for (let etapa = 1; etapa <= 31; etapa++) {
+      filenames.push(`loturi & echipe etapa ${etapa} - Liga ${liga}.csv`);
+      filenames.push(`clasament etapa ${etapa} - Liga ${liga}.csv`);
+    }
+  }
+
+  const progressEl = document.getElementById('autoload-progress');
+  const textEl = progressEl.querySelector('.autoload-text');
+  const barEl = progressEl.querySelector('.autoload-bar-fill');
+  progressEl.style.display = 'block';
+
+  let done = 0; let found = 0;
+  const total = filenames.length;
+
+  await Promise.all(filenames.map(async filename => {
+    try {
+      const res = await fetch('./data/' + encodeURIComponent(filename));
+      if (res.ok) { const text = await res.text(); processFileText(filename, text); found++; }
+    } catch (e) { /* fișier lipsă — skip */ }
+    done++;
+    barEl.style.width = Math.round((done / total) * 100) + '%';
+    textEl.textContent = `Se încarcă datele... ${done}/${total} fișiere verificate`;
+  }));
+
+  if (found > 0) {
+    textEl.className = 'autoload-text autoload-done';
+    textEl.textContent = `✅ ${found} fișiere încărcate automat din repository`;
+    barEl.style.width = '100%';
+    updateUploadUI();
+    calculateAll();
+    setTimeout(() => { progressEl.style.display = 'none'; }, 4000);
+  } else {
+    progressEl.style.display = 'none'; // Nimic găsit — ascunde silențios
+  }
 }
 
 function parseFilename(name) {
@@ -1948,6 +2000,8 @@ function generateColors(n) {
 }
 
 // config este embedded ca variabilă — gata la pornire, fără fetch.
+
+document.addEventListener('DOMContentLoaded', () => { autoLoadFromRepo(); });
 </script>
 </body>
 </html>
