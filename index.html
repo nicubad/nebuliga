@@ -1726,35 +1726,41 @@ function calcEchipa(liga, teamName) {
     }
   }
 
-  // Rezultate per etapă (diff din clasament succesiv)
-  const etapeClasSort = Object.keys(clasData).map(Number).sort((a, b) => a - b);
+  // Rezultate per etapă — combinăm etapele din clasament ȘI din lot
+  // (ca să nu pierdem etape care au lot dar nu au clasament sau vice versa)
+  const etapeFromClas = Object.keys(clasData).map(Number);
+  const etapeFromLot  = Object.keys(etapes).filter(et => !!(etapes[et] || {})[teamName]).map(Number);
+  const etapeAllSort  = [...new Set([...etapeFromClas, ...etapeFromLot])].sort((a, b) => a - b);
   const resultate = [];
   let prevClas = null;
-  for (const et of etapeClasSort) {
+  for (const et of etapeAllSort) {
     const entry = (clasData[et] || []).find(e => e.team === teamName);
-    if (!entry) { prevClas = null; continue; }
-    const tdEt = (etapes[et] || {})[teamName];
+    const tdEt  = (etapes[et] || {})[teamName];
+    // Sărim etapa dacă nu avem nicio sursă de date pentru această echipă
+    if (!entry && !tdEt) continue;
     let calcScore = null, fieldPts = null, gkConc = null;
     if (tdEt) {
-      fieldPts = tdEt.fieldTitulars.reduce((s, p) => s + (p.pts || 0), 0);
-      gkConc   = tdEt.gkConceded || 0;
+      fieldPts  = tdEt.fieldTitulars.reduce((s, p) => s + (p.pts || 0), 0);
+      gkConc    = tdEt.gkConceded || 0;
       calcScore = fieldPts - gkConc;
     }
     let result = '—';
-    if (!prevClas) {
-      if (entry.wins > 0) result = 'V';
-      else if (entry.draws > 0) result = 'E';
-      else if (entry.losses > 0) result = 'Î';
-    } else {
-      const dp = entry.played - prevClas.played;
-      if (dp === 1) {
-        if (entry.wins > prevClas.wins) result = 'V';
-        else if (entry.draws > prevClas.draws) result = 'E';
-        else if (entry.losses > prevClas.losses) result = 'Î';
-      } else if (dp > 1) { result = '?'; }
+    if (entry) {
+      if (!prevClas) {
+        if (entry.wins > 0) result = 'V';
+        else if (entry.draws > 0) result = 'E';
+        else if (entry.losses > 0) result = 'Î';
+      } else {
+        const dp = entry.played - prevClas.played;
+        if (dp === 1) {
+          if (entry.wins > prevClas.wins) result = 'V';
+          else if (entry.draws > prevClas.draws) result = 'E';
+          else if (entry.losses > prevClas.losses) result = 'Î';
+        } else if (dp > 1) { result = '?'; }
+      }
+      prevClas = entry;
     }
     resultate.push({ etapa: et, calcScore, fieldPts, gkConc, result });
-    prevClas = entry;
   }
 
   // Etape disponibile cu date de loturi pt. această echipă
