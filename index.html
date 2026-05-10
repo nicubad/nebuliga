@@ -814,9 +814,8 @@ function getClubLogoImg(abbrev) {
 }
 
 function getPlayerFullName(name) {
-  if (!name) return name;
-  const map = config.player_names || {};
-  return map[name] || map[name.toUpperCase()] || name;
+  // Reverted: se folosesc numele scurte din CSV pentru uniformizare
+  return name || '';
 }
 
 function teamLogoImg(teamName, size) {
@@ -1455,6 +1454,8 @@ function navigateToTeam(liga, teamName) {
   showPage(`l${liga}-echipe`);
   const sel = document.getElementById(`echipe-select-l${liga}`);
   if (sel) { sel.value = teamName; renderEchipaCard(liga, teamName); }
+  // Scroll la sus — pagina se deschide de la început, nu sare la lot
+  setTimeout(() => { const mc = document.querySelector('.main-content'); if (mc) mc.scrollTop = 0; window.scrollTo(0, 0); }, 0);
 }
 
 // ── Render owner cell (photo + name) ──
@@ -1733,8 +1734,12 @@ function calcEchipa(liga, teamName) {
     const entry = (clasData[et] || []).find(e => e.team === teamName);
     if (!entry) { prevClas = null; continue; }
     const tdEt = (etapes[et] || {})[teamName];
-    let calcScore = null;
-    if (tdEt) calcScore = tdEt.fieldTitulars.reduce((s, p) => s + (p.pts || 0), 0) - (tdEt.gkConceded || 0);
+    let calcScore = null, fieldPts = null, gkConc = null;
+    if (tdEt) {
+      fieldPts = tdEt.fieldTitulars.reduce((s, p) => s + (p.pts || 0), 0);
+      gkConc   = tdEt.gkConceded || 0;
+      calcScore = fieldPts - gkConc;
+    }
     let result = '—';
     if (!prevClas) {
       if (entry.wins > 0) result = 'V';
@@ -1748,7 +1753,7 @@ function calcEchipa(liga, teamName) {
         else if (entry.losses > prevClas.losses) result = 'Î';
       } else if (dp > 1) { result = '?'; }
     }
-    resultate.push({ etapa: et, calcScore, result });
+    resultate.push({ etapa: et, calcScore, fieldPts, gkConc, result });
     prevClas = entry;
   }
 
@@ -1797,8 +1802,16 @@ function calcEchipaEtapei(liga, teamName, etapa) {
     });
   }
   starters.sort((a, b) => (POS_ORDER[a.position] ?? 9) - (POS_ORDER[b.position] ?? 9));
-  const calcScore = td.fieldTitulars.reduce((s, p) => s + (p.pts || 0), 0) - (td.gkConceded || 0);
-  return { starters, formation: td.formation, calcScore };
+  const fieldPts = td.fieldTitulars.reduce((s, p) => s + (p.pts || 0), 0);
+  const gkConc = td.gkConceded || 0;
+  return { starters, formation: td.formation, fieldPts, gkConc, calcScore: fieldPts - gkConc };
+}
+
+function formatFormation(f) {
+  if (!f) return '';
+  const clean = f.replace(/\s+/g, '');
+  if (clean.includes('-')) return clean;
+  return clean.split('').filter(c => /\d/.test(c)).join('-');
 }
 
 window._echipaCurrentTeam = {};
@@ -1830,12 +1843,13 @@ function renderEchipaEtapaView(liga, etapaStr) {
 
   const scoreColor = d.calcScore > 0 ? 'var(--success)' : d.calcScore < 0 ? 'var(--danger)' : 'var(--text2)';
   if (scoreBar) {
+    const fmt = formatFormation(d.formation);
     scoreBar.innerHTML = `
       <div>
-        <div class="etapa-score-lbl">Scor calculat</div>
-        <div class="etapa-score-val" style="color:${scoreColor}">${d.calcScore > 0 ? '+' : ''}${d.calcScore}</div>
+        <div class="etapa-score-lbl">Scor</div>
+        <div class="etapa-score-val" style="color:${scoreColor}">${d.fieldPts}<span style="color:var(--text2);font-size:18px;font-weight:400;margin:0 4px">–</span>${d.gkConc}</div>
       </div>
-      ${d.formation ? `<div class="etapa-formation">${d.formation}</div>` : ''}
+      ${fmt ? `<div><div class="etapa-score-lbl">Sistem de Joc</div><div class="etapa-formation">${fmt}</div></div>` : ''}
       <div style="margin-left:auto;color:var(--text2);font-size:12px">${d.starters.length} titulari</div>`;
   }
 
@@ -1844,15 +1858,15 @@ function renderEchipaEtapaView(liga, etapaStr) {
       ? `<em title="Meci amânat" style="color:var(--warn);cursor:help">R</em>`
       : `${ptsCell(p.pts)}`;
     return `<tr>
-      <td class="left"><strong>${getPlayerFullName(p.name)}</strong></td>
       <td>${posBadge(p.position)}</td>
+      <td class="left"><strong>${p.name}</strong></td>
       <td class="left"><div class="cell-with-img">${getClubLogoImg(p.abbrev)}<span style="font-size:12px">${getClubFullName(p.abbrev, true)}</span></div></td>
       <td class="right">${ptsHtml}</td>
     </tr>`;
   }).join('');
 
   body.innerHTML = `<table>
-    <thead><tr><th class="left">Jucător</th><th>Post</th><th class="left">Club</th><th class="right">Pct</th></tr></thead>
+    <thead><tr><th>Post</th><th class="left">Jucător</th><th class="left">Club</th><th class="right">Pct</th></tr></thead>
     <tbody>${rows || '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:16px">Fără titulari înregistrați</td></tr>'}</tbody>
   </table>`;
 }
@@ -1918,14 +1932,22 @@ function renderEchipaCard(liga, teamName) {
       ${pal.losses} <span class="palma-badge palma-i">Î</span>
     </div>` : '';
 
-  // ── Golgheter / Rezerva de Plâns cu logo club ──
+  // ── Forma echipei (ultimele 5 rezultate) ──
+  const formaRez = data.resultate.filter(r => r.result !== '—' && r.result !== '?').slice(-5).reverse();
+  const formaMap = { V: 'palma-v', E: 'palma-e', 'Î': 'palma-i' };
+  const formaHtml = formaRez.length ? `
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--text2);font-weight:500">Formă:</span>
+      ${formaRez.map(r => `<span class="palma-badge ${formaMap[r.result] || 'palma-m'}" title="Etapa ${r.etapa}: ${r.fieldPts !== null ? r.fieldPts + '–' + r.gkConc : ''}">${r.result}</span>`).join('')}
+    </div>` : '';
+
+  // ── Golgheter / Rezerva de Plâns cu logo club + puncte în cerc ──
+  const ptsCircle = (pts, color) => `<span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:${color}22;color:${color};font-weight:800;font-size:14px;margin-left:8px;flex-shrink:0">${pts}</span>`;
   const bestScorerHtml = data.bestScorer
-    ? `<div class="cell-with-img" style="flex-wrap:wrap;gap:4px">${getClubLogoImg(data.bestScorer.abbrev)}<span>${getPlayerFullName(data.bestScorer.name)}</span></div>
-       <div style="color:var(--text2);font-size:11px;font-weight:400;margin-top:2px">${data.bestScorer.starterPts} pct. ca titular</div>`
+    ? `<div class="cell-with-img">${getClubLogoImg(data.bestScorer.abbrev)}<span>${data.bestScorer.name}</span>${ptsCircle(data.bestScorer.starterPts, 'var(--success)')}</div>`
     : '—';
   const bestReserveHtml = data.bestReserve
-    ? `<div class="cell-with-img" style="flex-wrap:wrap;gap:4px">${getClubLogoImg(data.bestReserve.abbrev)}<span>${getPlayerFullName(data.bestReserve.name)}</span></div>
-       <div style="color:var(--text2);font-size:11px;font-weight:400;margin-top:2px">${data.bestReserve.reservePts} pct. ca rezervă</div>`
+    ? `<div class="cell-with-img">${getClubLogoImg(data.bestReserve.abbrev)}<span>${data.bestReserve.name}</span>${ptsCircle(data.bestReserve.reservePts, 'var(--danger)')}</div>`
     : '—';
 
   // ── Lot — portari ──
@@ -1988,9 +2010,13 @@ function renderEchipaCard(liga, teamName) {
 
   // ── Rezultate ──
   const rezMap = { V: 'rez-v', E: 'rez-e', 'Î': 'rez-i' };
+  const rezColorMap = { V: 'var(--success)', E: 'var(--warn)', 'Î': 'var(--danger)' };
   const rezultateRows = data.resultate.map(r => {
     const cls = rezMap[r.result] || '';
-    const scoreStr = r.calcScore !== null ? `${r.calcScore > 0 ? '+' : ''}${r.calcScore} pct.` : '—';
+    const scoreColor = rezColorMap[r.result] || 'var(--text2)';
+    const scoreStr = r.fieldPts !== null
+      ? `<span style="color:${scoreColor};font-weight:600">${r.fieldPts}–${r.gkConc}</span>`
+      : '<span style="color:var(--text2)">—</span>';
     return `<tr class="rez-row ${cls}" onclick="onRezultatClick(${liga}, ${r.etapa})" title="Clic → Echipa Etapei ${r.etapa}">
       <td>Etapa ${r.etapa}</td>
       <td>${scoreStr}</td>
@@ -2007,6 +2033,7 @@ function renderEchipaCard(liga, teamName) {
         <div class="echipa-hero-info">
           <div class="echipa-hero-name" style="color:${accentColor}">${teamName}</div>
           ${palmaresHtml}
+          ${formaHtml}
           <div class="echipa-hero-owner">
             ${tc && tc.owner_photo ? `<img src="${tc.owner_photo}" class="owner-photo-hero" onerror="this.style.display='none'">` : ''}
             <div>
