@@ -565,26 +565,25 @@
 
 <!-- Sidebar -->
 <nav id="sidebar">
-  <div class="sidebar-title">⚽ Nebuliga<span>Fantasy Football Dashboard</span></div>
+  <div class="sidebar-title" onclick="showPage('upload')" style="cursor:pointer" title="Click pentru upload date">⚽ Nebuliga<span>Fantasy Football Dashboard</span></div>
   <div class="nav-scroll">
-  <div class="nav-section">General</div>
-  <button class="nav-btn active" onclick="showPage('upload')">📂 Upload date</button>
+  <button class="nav-btn" style="display:none" onclick="showPage('upload')">📂 Upload date</button>
   <div class="nav-section">Liga 1</div>
+  <button class="nav-btn active" onclick="showPage('l1-clasament')">📈 Clasament</button>
+  <button class="nav-btn" onclick="showPage('l1-echipe')">🏟️ Echipe</button>
   <button class="nav-btn" onclick="showPage('l1-golgheter')">🏅 Golgheterul Ligii</button>
-  <button class="nav-btn" onclick="showPage('l1-pozitii')">📊 Golgheteri Posturi</button>
+  <button class="nav-btn" onclick="showPage('l1-pozitii')">📊 Golgheteri pe Posturi</button>
   <button class="nav-btn" onclick="showPage('l1-portari')">🧤 Portari</button>
   <button class="nav-btn" onclick="showPage('l1-inspiratie')">💡 Coef. Inspirație</button>
   <button class="nav-btn" onclick="showPage('l1-rezerve')">🪑 Rezerva de Plâns</button>
-  <button class="nav-btn" onclick="showPage('l1-clasament')">📈 Clasament</button>
-  <button class="nav-btn" onclick="showPage('l1-echipe')">🏟️ Echipe</button>
   <div class="nav-section">Liga 2</div>
+  <button class="nav-btn liga2" onclick="showPage('l2-clasament')">📈 Clasament</button>
+  <button class="nav-btn liga2" onclick="showPage('l2-echipe')">🏟️ Echipe</button>
   <button class="nav-btn liga2" onclick="showPage('l2-golgheter')">🏅 Golgheterul Ligii</button>
-  <button class="nav-btn liga2" onclick="showPage('l2-pozitii')">📊 Golgheteri Posturi</button>
+  <button class="nav-btn liga2" onclick="showPage('l2-pozitii')">📊 Golgheteri pe Posturi</button>
   <button class="nav-btn liga2" onclick="showPage('l2-portari')">🧤 Portari</button>
   <button class="nav-btn liga2" onclick="showPage('l2-inspiratie')">💡 Coef. Inspirație</button>
   <button class="nav-btn liga2" onclick="showPage('l2-rezerve')">🪑 Rezerva de Plâns</button>
-  <button class="nav-btn liga2" onclick="showPage('l2-clasament')">📈 Clasament</button>
-  <button class="nav-btn liga2" onclick="showPage('l2-echipe')">🏟️ Echipe</button>
   </div><!-- /nav-scroll -->
 </nav>
 
@@ -592,7 +591,7 @@
 <div id="main">
 
   <!-- ══ UPLOAD ══ -->
-  <div id="page-upload" class="page active">
+  <div id="page-upload" class="page">
     <div class="page-title">Upload fișiere CSV</div>
     <div class="page-sub">Încarcă toate fișierele deodată. Tipul, liga și etapa sunt detectate automat din numele fișierului.</div>
 
@@ -662,7 +661,7 @@
   </div>
 
   <!-- ══ LIGA 1 — Clasament ══ -->
-  <div id="page-l1-clasament" class="page">
+  <div id="page-l1-clasament" class="page active">
     <div class="page-title">📈 Evoluție Clasament — Liga 1</div>
     <div class="page-sub">Poziția fiecărei echipe etapă cu etapă. Locul 1 = sus.</div>
     <div id="l1-clasament-content"></div>
@@ -1338,8 +1337,8 @@ function calculateAll() {
 
   const has1 = Object.keys(state.ligaData[1].etapes).length > 0;
   const has2 = Object.keys(state.ligaData[2].etapes).length > 0;
-  if (has1) showPage('l1-golgheter');
-  else if (has2) showPage('l2-golgheter');
+  if (has1) showPage('l1-clasament');
+  else if (has2) showPage('l2-clasament');
 }
 
 // ══════════════════════════════════════════════════════
@@ -1768,7 +1767,7 @@ function renderEchipaCard(liga, teamName) {
               <span class="echipa-stat-val" style="color:${accentColor}">${posDisplay}</span>
             </div>
             <div class="echipa-stat">
-              <span class="echipa-stat-label">Puncte reale</span>
+              <span class="echipa-stat-label">Punctaj</span>
               <span class="echipa-stat-val">${ptsDisplay}</span>
             </div>
             <div class="echipa-stat">
