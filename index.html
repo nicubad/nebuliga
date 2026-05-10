@@ -1688,7 +1688,7 @@ function calcEchipa(liga, teamName) {
   let currentPos = null, currentPts = null;
   if (etapaKeys.length > 0) {
     const entry = (clasData[etapaKeys[0]] || []).find(e => e.team === teamName);
-    if (entry) { currentPos = entry.position; currentPts = entry.pts; }
+    if (entry) { currentPos = entry.position; currentPts = entry.points; }
   }
 
   // Coeficient de inspirație
@@ -1802,7 +1802,7 @@ function renderEchipaCard(liga, teamName) {
     <div class="card echipa-main-card" style="margin-bottom:20px">
       <div class="echipa-hero">
         <div class="echipa-hero-logo">
-          ${tc && tc.logo ? `<img src="${tc.logo}" class="team-logo-xl" style="box-shadow:0 0 0 2px ${accentColor}33" onerror="this.style.display='none'">` : '<div class="placeholder-logo" style="border:2px solid ${accentColor}33">🏟️</div>'}
+          ${tc && tc.logo ? `<img src="${tc.logo}" class="team-logo-xl" style="box-shadow:0 0 0 2px ${accentColor}33" onerror="this.style.display='none'">` : `<div class="placeholder-logo" style="border:2px solid ${accentColor}33">🏟️</div>`}
         </div>
         <div class="echipa-hero-info">
           <div class="echipa-hero-name" style="color:${accentColor}">${teamName}</div>
