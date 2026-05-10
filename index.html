@@ -113,6 +113,7 @@
 
   /* ── Team logos & owner photos ── */
   .team-logo-sm { width: 22px; height: 22px; border-radius: 3px; object-fit: contain; vertical-align: middle; margin-right: 5px; background: rgba(255,255,255,0.04); flex-shrink: 0; }
+  .club-logo-sm { width: 20px; height: 20px; object-fit: contain; vertical-align: middle; margin-right: 5px; flex-shrink: 0; }
   .team-logo { width: 28px; height: 28px; border-radius: 4px; object-fit: contain; vertical-align: middle; margin-right: 6px; background: rgba(255,255,255,0.04); flex-shrink: 0; }
   .owner-photo { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 6px; flex-shrink: 0; }
   .cell-with-img { display: flex; align-items: center; }
@@ -511,11 +512,11 @@
 
     /* ── Tabele statistici: column hiding ── */
 
-    /* Golgheter Ligii + Golgheter Poziții: ascunde coloana 3 (Echipă reală) */
-    [id$="-golgheter-content"] table th:nth-child(3),
-    [id$="-golgheter-content"] table td:nth-child(3),
-    [id$="-pozitii-content"] table th:nth-child(3),
-    [id$="-pozitii-content"] table td:nth-child(3) { display: none; }
+    /* Golgheter Ligii + Golgheter Poziții: ascunde coloana 3 (Meciuri) pe mobile */
+    [id$="-golgheter-content"] table th:nth-child(4),
+    [id$="-golgheter-content"] table td:nth-child(4),
+    [id$="-pozitii-content"] table th:nth-child(4),
+    [id$="-pozitii-content"] table td:nth-child(4) { display: none; }
 
     /* Portari: ascunde coloana 5 (Et. tit. / Etape) — Gol. prim. + Medie rămân */
     [id$="-portari-content"] table th:nth-child(5),
@@ -525,11 +526,9 @@
     [id$="-inspiratie-content"] table th:nth-child(3),
     [id$="-inspiratie-content"] table td:nth-child(3) { display: none; }
 
-    /* Rezerva de Plâns: ascunde coloana 3 (Echipă reală) și coloana 6 (Apariții) */
-    [id$="-rezerve-content"] table th:nth-child(3),
-    [id$="-rezerve-content"] table td:nth-child(3),
-    [id$="-rezerve-content"] table th:nth-child(6),
-    [id$="-rezerve-content"] table td:nth-child(6) { display: none; }
+    /* Rezerva de Plâns: ascunde coloana 4 (Apariții) pe mobile */
+    [id$="-rezerve-content"] table th:nth-child(4),
+    [id$="-rezerve-content"] table td:nth-child(4) { display: none; }
 
     /* ── Grafice Chart.js ── */
     .chart-wrap {
@@ -752,7 +751,7 @@ const postponedPlayerNames = new Set(); // player names (UPPERCASE) cu cel puți
 // ══════════════════════════════════════════════════════
 // CONFIG — EMBEDDED (nu are nevoie de fetch)
 // ══════════════════════════════════════════════════════
-const config = {"teams":[{"team_name":"BRITANICII","owner_name_short":"D MOLAN","owner_name_full":"Daniel Molan","slug":"britanicii","logo":"images/britanicii_logo.jpg","owner_photo":"images/britanicii_owner.jpg"},{"team_name":"FC MUMU LU' TALPANU'","owner_name_short":"Lică MOLAN","owner_name_full":"Lică Molan","slug":"fc_mumu_lu_talpanu","logo":"images/fc_mumu_lu_talpanu_logo.jpg","owner_photo":"images/fc_mumu_lu_talpanu_owner.jpg"},{"team_name":"SLOBOZ","owner_name_short":"A COSTEIU","owner_name_full":"Adrian Costeiu","slug":"sloboz","logo":"images/sloboz_logo.jpg","owner_photo":"images/sloboz_owner.jpg"},{"team_name":"THE CRYSTAL SHIP","owner_name_short":"C ROSU","owner_name_full":"Cristi Roșu","slug":"the_crystal_ship","logo":"images/the_crystal_ship_logo.jpg","owner_photo":"images/the_crystal_ship_owner.jpg"},{"team_name":"RUBIN KAZAN","owner_name_short":"R HOFBAUER","owner_name_full":"Răzvan Hofbauer","slug":"rubin_kazan","logo":"images/rubin_kazan_logo.jpg","owner_photo":"images/rubin_kazan_owner.jpg"},{"team_name":"RAPID","owner_name_short":"I FOCSANEANU","owner_name_full":"Iulian Focșăneanu","slug":"rapid","logo":"images/rapid_logo.jpg","owner_photo":"images/rapid_owner.jpg"},{"team_name":"RTM CHIAJNA","owner_name_short":"R TUDOR","owner_name_full":"Răzvan Tudor","slug":"rtm_chiajna","logo":"images/rtm_chiajna_logo.jpg","owner_photo":"images/rtm_chiajna_owner.jpg"},{"team_name":"ATLETICO DRAGALINA","owner_name_short":"G BERCEANU","owner_name_full":"Gabriel Berceanu","slug":"atletico_dragalina","logo":"images/atletico_dragalina_logo.jpg","owner_photo":"images/atletico_dragalina_owner.jpg"},{"team_name":"AS STEAUA FERENTARI","owner_name_short":"F CEAFALAU","owner_name_full":"Florin Ceafălău","slug":"as_steaua_ferentari","logo":"images/as_steaua_ferentari_logo.jpg","owner_photo":"images/as_steaua_ferentari_owner.jpg"},{"team_name":"THE GUNNERS","owner_name_short":"D SONERIU","owner_name_full":"Dragoș Șoneriu","slug":"the_gunners","logo":"images/the_gunners_logo.jpg","owner_photo":"images/the_gunners_owner.jpg"},{"team_name":"METALU' BOB","owner_name_short":"A BOBEICA","owner_name_full":"Andrei Bobeică","slug":"metalu_bob","logo":"images/metalu_bob_logo.jpg","owner_photo":"images/metalu_bob_owner.jpg"},{"team_name":"FC HUTU","owner_name_short":"M HUTU","owner_name_full":"Marius Huțu","slug":"fc_hutu","logo":"images/fc_hutu_logo.jpg","owner_photo":"images/fc_hutu_owner.jpg"},{"team_name":"IONEL MESSI","owner_name_short":"B CHIRILA","owner_name_full":"Bogdan Chirilă","slug":"ionel_messi","logo":"images/ionel_messi_logo.jpg","owner_photo":"images/ionel_messi_owner.jpg"},{"team_name":"JUVERPOOL","owner_name_short":"G DINCA","owner_name_full":"Gabriel Dincă","slug":"juverpool","logo":"images/juverpool_logo.jpg","owner_photo":"images/juverpool_owner.jpg"},{"team_name":"TEI, CARTIER DE TREI LEI","owner_name_short":"I ALEXANDRU","owner_name_full":"Ion Alexandru","slug":"tei_cartier_de_trei_lei","logo":"images/tei_cartier_de_trei_lei_logo.jpg","owner_photo":"images/tei_cartier_de_trei_lei_owner.jpg"},{"team_name":"PAVEL NEDVED","owner_name_short":"D ROSU","owner_name_full":"Dan Roșu","slug":"pavel_nedved","logo":"images/pavel_nedved_logo.jpg","owner_photo":"images/pavel_nedved_owner.jpg"},{"team_name":"TUNETUL FC","owner_name_short":"A ISPAS","owner_name_full":"Andrei Ispas","slug":"tunetul_fc","logo":"images/tunetul_fc_logo.jpg","owner_photo":"images/tunetul_fc_owner.jpg"},{"team_name":"BOBA JUNIORS","owner_name_short":"S BOBEICA","owner_name_full":"Sorin Bobeică","slug":"boba_juniors","logo":"images/boba_juniors_logo.jpg","owner_photo":"images/boba_juniors_owner.jpg"},{"team_name":"FCEI MAI BUNI","owner_name_short":"A RADULESCU","owner_name_full":"Andrei Rădulescu","slug":"fcei_mai_buni","logo":"images/fcei_mai_buni_logo.jpg","owner_photo":"images/fcei_mai_buni_owner.jpg"},{"team_name":"FLAKERS UTD","owner_name_short":"M CRACIUN","owner_name_full":"Mihai Crăciun","slug":"flakers_utd","logo":"images/flakers_utd_logo.jpg","owner_photo":"images/flakers_utd_owner.jpg"},{"team_name":"FC TORPILA BUCURESTI","owner_name_short":"R ENACHESCU","owner_name_full":"Răzvan Enăchescu","slug":"fc_torpila_bucuresti","logo":"images/fc_torpila_bucuresti_logo.jpg","owner_photo":"images/fc_torpila_bucuresti_owner.jpg"},{"team_name":"FC WIN MASTER","owner_name_short":"B GHEORGHE","owner_name_full":"Bogdan Gheorghe","slug":"fc_win_master","logo":"images/fc_win_master_logo.jpg","owner_photo":"images/fc_win_master_owner.jpg"},{"team_name":"MIGHTY MELONS","owner_name_short":"N BADESCU","owner_name_full":"Nicu Bădescu","slug":"mighty_melons","logo":"images/mighty_melons_logo.jpg","owner_photo":"images/mighty_melons_owner.jpg"},{"team_name":"FC COJASCA","owner_name_short":"V PARCALABU","owner_name_full":"Valentin Pârcălabu","slug":"fc_cojasca","logo":"images/fc_cojasca_logo.jpg","owner_photo":"images/fc_cojasca_owner.jpg"},{"team_name":"RAPID FETESTI","owner_name_short":"P GROZEA","owner_name_full":"Puiu Grozea","slug":"rapid_fetesti","logo":"images/rapid_fetesti_logo.jpg","owner_photo":"images/rapid_fetesti_owner.jpg"},{"team_name":"FC HERMANSTAR","owner_name_short":"A IONITA","owner_name_full":"Alex Ioniță","slug":"fc_hermanstar","logo":"images/fc_hermanstar_logo.jpg","owner_photo":"images/fc_hermanstar_owner.jpg"},{"team_name":"CHELSEA PITESTI","owner_name_short":"B FLUTUREL","owner_name_full":"Bogdan Fluturel","slug":"chelsea_pitesti","logo":"images/chelsea_pitesti_logo.jpg","owner_photo":"images/chelsea_pitesti_owner.jpg"},{"team_name":"FC PINALTY","owner_name_short":"L ALBU","owner_name_full":"Lucian Albu","slug":"fc_pinalty","logo":"images/fc_pinalty_logo.jpg","owner_photo":"images/fc_pinalty_owner.jpg"},{"team_name":"FC SONICS","owner_name_short":"B MILEA","owner_name_full":"Bogdan Milea","slug":"fc_sonics","logo":"images/fc_sonics_logo.jpg","owner_photo":"images/fc_sonics_owner.jpg"},{"team_name":"SILVA NEGRA","owner_name_short":"S CORNEANU","owner_name_full":"Silviu Corneanu","slug":"silva_negra","logo":"images/silva_negra_logo.jpg","owner_photo":"images/silva_negra_owner.jpg"},{"team_name":"FC COLENTINA","owner_name_short":"M PANA","owner_name_full":"Mădălin Pană","slug":"fc_colentina","logo":"images/fc_colentina_logo.jpg","owner_photo":"images/fc_colentina_owner.jpg"},{"team_name":"R.A.F.A.","owner_name_short":"C MIHALA","owner_name_full":"Cristi Mihală","slug":"r_a_f_a","logo":"images/r_a_f_a_logo.jpg","owner_photo":"images/r_a_f_a_owner.jpg"}],"club_names":{"ARS":"Arsenal","AV":"Aston Villa","BOU":"Bournemouth","BRE":"Brest","BRI":"Brighton","CHE":"Chelsea","CP":"Crystal Palace","EVE":"Everton","FUL":"Fulham","LEE":"Leeds","LIV":"Liverpool","MC":"Man. City","MU":"Man. United","NEW":"Newcastle","NOT":"Nottingham Forest","TOT":"Tottenham Hotspur","WH":"West Ham United","WLV":"Wolverhampton","SUN":"Sunderland","BRN":"Brentford","BAR":"FC Barcelona","RM":"Real Madrid","AM":"Atlético Madrid","BIL":"Athletic Bilbao","SOC":"Real Sociedad","VIL":"Villarreal","BET":"Betis Sevilla","VLC":"Rayo Vallecano","GET":"Getafe","ALA":"Alavés","GIR":"Girona","SEV":"Sevilla FC","OVI":"Real Oviedo","CEL":"Celta Vigo","ESP":"Espanyol","OSA":"Osasuna","LEV":"Levante","MAL":"Mallorca","VAL":"Valencia","ELC":"Elche","JUV":"Juventus","INT":"Inter Milan","MIL":"AC Milan","NAP":"Napoli","ATA":"Atalanta","ROM":"AS Roma","LAZ":"SS Lazio","FIO":"Fiorentina","BOL":"Bologna","TOR":"Torino FC","UDI":"Udinese","SAS":"Sassuolo","GEN":"Genoa","LEC":"US Lecce","CAG":"Cagliari","VER":"Verona","PIS":"Pisa","PAR":"Parma","COM":"Como","MON":"AS Monaco","BM":"Bayern München","DOR":"Borussia Dortmund","LPZ":"RB Leipzig","LVN":"Bayer Leverkusen","FRA":"Eintracht Frankfurt","STU":"VfB Stuttgart","HOF":"Hoffenheim","AUG":"Augsburg","WB":"Werder Bremen","HEI":"Heidenheim","MAI":"FSV Mainz","KOL":"FC Köln","MNG":"Borussia Mönchengladbach","WOL":"Wolfsburg","BUR":"Burnley","HMB":"Hamburger SV","STP":"VfB Stuttgart","STR":"RC Strasbourg","BL":"Bayer Leverkusen","PSG":"Paris Saint-Germain","LYO":"Olympique Lyon","OM":"Olympique Marseille","LIL":"LOSC Lille","REN":"Rennes","NAN":"Nantes","LEN":"Lens","NIC":"Nice","TOU":"Toulouse","AUX":"Auxerre","ANG":"Angers","LOR":"Lorient","LH":"Le Havre","FRE":"Freiburg","MET":"Metz","UB":"Union Berlin"}};
+const config = {"teams":[{"team_name":"BRITANICII","owner_name_short":"D MOLAN","owner_name_full":"Daniel Molan","slug":"britanicii","logo":"images/britanicii_logo.jpg","owner_photo":"images/britanicii_owner.jpg"},{"team_name":"FC MUMU LU' TALPANU'","owner_name_short":"Lică MOLAN","owner_name_full":"Lică Molan","slug":"fc_mumu_lu_talpanu","logo":"images/fc_mumu_lu_talpanu_logo.jpg","owner_photo":"images/fc_mumu_lu_talpanu_owner.jpg"},{"team_name":"SLOBOZ","owner_name_short":"A COSTEIU","owner_name_full":"Adrian Costeiu","slug":"sloboz","logo":"images/sloboz_logo.jpg","owner_photo":"images/sloboz_owner.jpg"},{"team_name":"THE CRYSTAL SHIP","owner_name_short":"C ROSU","owner_name_full":"Cristi Roșu","slug":"the_crystal_ship","logo":"images/the_crystal_ship_logo.jpg","owner_photo":"images/the_crystal_ship_owner.jpg"},{"team_name":"RUBIN KAZAN","owner_name_short":"R HOFBAUER","owner_name_full":"Răzvan Hofbauer","slug":"rubin_kazan","logo":"images/rubin_kazan_logo.jpg","owner_photo":"images/rubin_kazan_owner.jpg"},{"team_name":"RAPID","owner_name_short":"I FOCSANEANU","owner_name_full":"Iulian Focșăneanu","slug":"rapid","logo":"images/rapid_logo.jpg","owner_photo":"images/rapid_owner.jpg"},{"team_name":"RTM CHIAJNA","owner_name_short":"R TUDOR","owner_name_full":"Răzvan Tudor","slug":"rtm_chiajna","logo":"images/rtm_chiajna_logo.jpg","owner_photo":"images/rtm_chiajna_owner.jpg"},{"team_name":"ATLETICO DRAGALINA","owner_name_short":"G BERCEANU","owner_name_full":"Gabriel Berceanu","slug":"atletico_dragalina","logo":"images/atletico_dragalina_logo.jpg","owner_photo":"images/atletico_dragalina_owner.jpg"},{"team_name":"AS STEAUA FERENTARI","owner_name_short":"F CEAFALAU","owner_name_full":"Florin Ceafălău","slug":"as_steaua_ferentari","logo":"images/as_steaua_ferentari_logo.jpg","owner_photo":"images/as_steaua_ferentari_owner.jpg"},{"team_name":"THE GUNNERS","owner_name_short":"D SONERIU","owner_name_full":"Dragoș Șoneriu","slug":"the_gunners","logo":"images/the_gunners_logo.jpg","owner_photo":"images/the_gunners_owner.jpg"},{"team_name":"METALU' BOB","owner_name_short":"A BOBEICA","owner_name_full":"Andrei Bobeică","slug":"metalu_bob","logo":"images/metalu_bob_logo.jpg","owner_photo":"images/metalu_bob_owner.jpg"},{"team_name":"FC HUTU","owner_name_short":"M HUTU","owner_name_full":"Marius Huțu","slug":"fc_hutu","logo":"images/fc_hutu_logo.jpg","owner_photo":"images/fc_hutu_owner.jpg"},{"team_name":"IONEL MESSI","owner_name_short":"B CHIRILA","owner_name_full":"Bogdan Chirilă","slug":"ionel_messi","logo":"images/ionel_messi_logo.jpg","owner_photo":"images/ionel_messi_owner.jpg"},{"team_name":"JUVERPOOL","owner_name_short":"G DINCA","owner_name_full":"Gabriel Dincă","slug":"juverpool","logo":"images/juverpool_logo.jpg","owner_photo":"images/juverpool_owner.jpg"},{"team_name":"TEI, CARTIER DE TREI LEI","owner_name_short":"I ALEXANDRU","owner_name_full":"Ion Alexandru","slug":"tei_cartier_de_trei_lei","logo":"images/tei_cartier_de_trei_lei_logo.jpg","owner_photo":"images/tei_cartier_de_trei_lei_owner.jpg"},{"team_name":"PAVEL NEDVED","owner_name_short":"D ROSU","owner_name_full":"Dan Roșu","slug":"pavel_nedved","logo":"images/pavel_nedved_logo.jpg","owner_photo":"images/pavel_nedved_owner.jpg"},{"team_name":"TUNETUL FC","owner_name_short":"A ISPAS","owner_name_full":"Andrei Ispas","slug":"tunetul_fc","logo":"images/tunetul_fc_logo.jpg","owner_photo":"images/tunetul_fc_owner.jpg"},{"team_name":"BOBA JUNIORS","owner_name_short":"S BOBEICA","owner_name_full":"Sorin Bobeică","slug":"boba_juniors","logo":"images/boba_juniors_logo.jpg","owner_photo":"images/boba_juniors_owner.jpg"},{"team_name":"FCEI MAI BUNI","owner_name_short":"A RADULESCU","owner_name_full":"Andrei Rădulescu","slug":"fcei_mai_buni","logo":"images/fcei_mai_buni_logo.jpg","owner_photo":"images/fcei_mai_buni_owner.jpg"},{"team_name":"FLAKERS UTD","owner_name_short":"M CRACIUN","owner_name_full":"Mihai Crăciun","slug":"flakers_utd","logo":"images/flakers_utd_logo.jpg","owner_photo":"images/flakers_utd_owner.jpg"},{"team_name":"FC TORPILA BUCURESTI","owner_name_short":"R ENACHESCU","owner_name_full":"Răzvan Enăchescu","slug":"fc_torpila_bucuresti","logo":"images/fc_torpila_bucuresti_logo.jpg","owner_photo":"images/fc_torpila_bucuresti_owner.jpg"},{"team_name":"FC WIN MASTER","owner_name_short":"B GHEORGHE","owner_name_full":"Bogdan Gheorghe","slug":"fc_win_master","logo":"images/fc_win_master_logo.jpg","owner_photo":"images/fc_win_master_owner.jpg"},{"team_name":"MIGHTY MELONS","owner_name_short":"N BADESCU","owner_name_full":"Nicu Bădescu","slug":"mighty_melons","logo":"images/mighty_melons_logo.jpg","owner_photo":"images/mighty_melons_owner.jpg"},{"team_name":"FC COJASCA","owner_name_short":"V PARCALABU","owner_name_full":"Valentin Pârcălabu","slug":"fc_cojasca","logo":"images/fc_cojasca_logo.jpg","owner_photo":"images/fc_cojasca_owner.jpg"},{"team_name":"RAPID FETESTI","owner_name_short":"P GROZEA","owner_name_full":"Puiu Grozea","slug":"rapid_fetesti","logo":"images/rapid_fetesti_logo.jpg","owner_photo":"images/rapid_fetesti_owner.jpg"},{"team_name":"FC HERMANSTAR","owner_name_short":"A IONITA","owner_name_full":"Alex Ioniță","slug":"fc_hermanstar","logo":"images/fc_hermanstar_logo.jpg","owner_photo":"images/fc_hermanstar_owner.jpg"},{"team_name":"CHELSEA PITESTI","owner_name_short":"B FLUTUREL","owner_name_full":"Bogdan Fluturel","slug":"chelsea_pitesti","logo":"images/chelsea_pitesti_logo.jpg","owner_photo":"images/chelsea_pitesti_owner.jpg"},{"team_name":"FC PINALTY","owner_name_short":"L ALBU","owner_name_full":"Lucian Albu","slug":"fc_pinalty","logo":"images/fc_pinalty_logo.jpg","owner_photo":"images/fc_pinalty_owner.jpg"},{"team_name":"FC SONICS","owner_name_short":"B MILEA","owner_name_full":"Bogdan Milea","slug":"fc_sonics","logo":"images/fc_sonics_logo.jpg","owner_photo":"images/fc_sonics_owner.jpg"},{"team_name":"SILVA NEGRA","owner_name_short":"S CORNEANU","owner_name_full":"Silviu Corneanu","slug":"silva_negra","logo":"images/silva_negra_logo.jpg","owner_photo":"images/silva_negra_owner.jpg"},{"team_name":"FC COLENTINA","owner_name_short":"M PANA","owner_name_full":"Mădălin Pană","slug":"fc_colentina","logo":"images/fc_colentina_logo.jpg","owner_photo":"images/fc_colentina_owner.jpg"},{"team_name":"R.A.F.A.","owner_name_short":"C MIHALA","owner_name_full":"Cristi Mihală","slug":"r_a_f_a","logo":"images/r_a_f_a_logo.jpg","owner_photo":"images/r_a_f_a_owner.jpg"}],"club_logo_files":{"AUX":"Auxerre"},"player_names":{"YAMAL":"Lamine Yamal","SALAH":"Mohamed Salah","HAALAND":"Erling Haaland","MBAPPE":"Kylian Mbappé","VINICIUS":"Vinícius Jr."},"club_names":{"ARS":"Arsenal","AV":"Aston Villa","BOU":"Bournemouth","BRE":"Brest","BRI":"Brighton","CHE":"Chelsea","CP":"Crystal Palace","EVE":"Everton","FUL":"Fulham","LEE":"Leeds","LIV":"Liverpool","MC":"Man. City","MU":"Man. United","NEW":"Newcastle","NOT":"Nottingham Forest","TOT":"Tottenham Hotspur","WH":"West Ham United","WLV":"Wolverhampton","SUN":"Sunderland","BRN":"Brentford","BAR":"FC Barcelona","RM":"Real Madrid","AM":"Atlético Madrid","BIL":"Athletic Bilbao","SOC":"Real Sociedad","VIL":"Villarreal","BET":"Betis Sevilla","VLC":"Rayo Vallecano","GET":"Getafe","ALA":"Alavés","GIR":"Girona","SEV":"Sevilla FC","OVI":"Real Oviedo","CEL":"Celta Vigo","ESP":"Espanyol","OSA":"Osasuna","LEV":"Levante","MAL":"Mallorca","VAL":"Valencia","ELC":"Elche","JUV":"Juventus","INT":"Inter Milan","MIL":"AC Milan","NAP":"Napoli","ATA":"Atalanta","ROM":"AS Roma","LAZ":"SS Lazio","FIO":"Fiorentina","BOL":"Bologna","TOR":"Torino FC","UDI":"Udinese","SAS":"Sassuolo","GEN":"Genoa","LEC":"US Lecce","CAG":"Cagliari","VER":"Verona","PIS":"Pisa","PAR":"Parma","COM":"Como","MON":"AS Monaco","BM":"Bayern München","DOR":"Borussia Dortmund","LPZ":"RB Leipzig","PRS":"Paris FC","FRA":"Eintracht Frankfurt","STU":"VfB Stuttgart","HOF":"Hoffenheim","AUG":"Augsburg","WB":"Werder Bremen","HEI":"Heidenheim","MAI":"FSV Mainz","KOL":"FC Köln","MNG":"Borussia Mönchengladbach","WOL":"Wolfsburg","BUR":"Burnley","HMB":"Hamburger SV","STP":"FC St. Pauli","STR":"RC Strasbourg","BL":"Bayer Leverkusen","PSG":"Paris Saint-Germain","LYO":"Olympique Lyon","OM":"Olympique Marseille","LIL":"LOSC Lille","REN":"Rennes","NAN":"Nantes","LEN":"Lens","NIC":"Nice","TOU":"Toulouse","AUX":"Auxerre","ANG":"Angers","LOR":"Lorient","LH":"Le Havre","FRE":"Freiburg","MET":"Metz","UB":"Union Berlin"}};
 
 function loadConfig() { /* config este embedded — nimic de făcut */ }
 
@@ -769,6 +768,19 @@ function getClubFullName(abbrev) {
   if (!full) return `<span class="abbrev-unknown" title="Abreviere necunoscută: ${abbrev}">${abbrev} <em style="font-size:10px">(?)</em></span>`;
   if (full.startsWith('⚠️')) return `<span class="abbrev-warn" title="${full}">${abbrev} <em style="font-size:10px">(?)</em></span>`;
   return full;
+}
+
+function getClubLogoImg(abbrev) {
+  if (!abbrev) return '';
+  const overrides = config.club_logo_files || {};
+  const filename = overrides[abbrev] || abbrev;
+  return `<img src="images/clubs/${filename}.png" alt="" class="club-logo-sm" onerror="this.style.display='none'">`;
+}
+
+function getPlayerFullName(name) {
+  if (!name) return name;
+  const map = config.player_names || {};
+  return map[name] || map[name.toUpperCase()] || name;
 }
 
 function teamLogoImg(teamName, size) {
@@ -1384,11 +1396,13 @@ function displayPostponedAlert(filename, postponedGroups) {
 }
 
 // ── Player name cell — italic + tooltip dacă are meci amânat ──
-function playerNameCell(name, position) {
+function playerNameCell(name, position, abbrev) {
+  const fullName = getPlayerFullName(name);
+  const logoHtml = abbrev ? getClubLogoImg(abbrev) : '';
   if (postponedPlayerNames.has(name.toUpperCase())) {
-    return `<span class="player-postponed" title="Meci amânat în cel puțin o etapă"><em>${name}</em>${posBadge(position)}</span>`;
+    return `<div class="cell-with-img"><span class="player-postponed" title="Meci amânat în cel puțin o etapă">${logoHtml}<em>${fullName}</em>${posBadge(position)}</span></div>`;
   }
-  return `<strong>${name}</strong>${posBadge(position)}`;
+  return `<div class="cell-with-img">${logoHtml}<strong>${fullName}</strong>${posBadge(position)}</div>`;
 }
 
 // ── Render Nebuliga team cell (logo + name, clickabil dacă liga e known) ──
@@ -1427,8 +1441,7 @@ function renderGolgheterLiga(liga, data, accentColor) {
   const rows = data.map((p, i) => `
     <tr>
       ${rankCell(i)}
-      <td class="left">${playerNameCell(p.name, p.position)}</td>
-      <td class="left" style="font-size:12px">${getClubFullName(p.abbrev)}</td>
+      <td class="left">${playerNameCell(p.name, p.position, p.abbrev)}</td>
       <td class="left">${nebuligaCell(p.nebuligaTeam)}</td>
       <td>${ptsCell(p.pts)}</td>
       <td class="avg-cell">${p.appearances}</td>
@@ -1439,7 +1452,7 @@ function renderGolgheterLiga(liga, data, accentColor) {
       <div class="card-header"><h3>Top 15 Jucători de Câmp — Liga ${liga}</h3><span class="badge">Ca titular</span></div>
       <div class="card-body scroll-table">
         <table>
-          <thead><tr><th class="left">#</th><th class="left">Jucător</th><th class="left">Echipă reală</th><th class="left">Nebuliga</th><th>Pct</th><th>Meciuri</th></tr></thead>
+          <thead><tr><th class="left">#</th><th class="left">Jucător</th><th class="left">Nebuliga</th><th>Pct</th><th>Meciuri</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
@@ -1489,7 +1502,7 @@ function renderGolgheterPozitii(liga, accentColor) {
         <div class="card-header"><h3>${current.icon} Top 10 ${current.label} — Liga ${liga}</h3><span class="badge">Ca titular</span></div>
         <div class="card-body scroll-table">
           <table>
-            <thead><tr><th class="left">#</th><th class="left">Jucător</th><th class="left">Echipă reală</th><th class="left">Nebuliga</th><th>Pct</th><th>Meciuri</th></tr></thead>
+            <thead><tr><th class="left">#</th><th class="left">Jucător</th><th class="left">Nebuliga</th><th>Pct</th><th>Meciuri</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
         </div>
@@ -1595,8 +1608,7 @@ function renderRezervaDenVis(liga, data, accentColor) {
   const rows = data.map((p, i) => `
     <tr>
       ${rankCell(i)}
-      <td class="left">${playerNameCell(p.name, p.position)}</td>
-      <td class="left" style="font-size:12px">${getClubFullName(p.abbrev)}</td>
+      <td class="left">${playerNameCell(p.name, p.position, p.abbrev)}</td>
       <td class="left">${nebuligaCell(p.nebuligaTeam)}</td>
       <td class="right">${ptsCell(p.pts)}</td>
       <td class="right avg-cell">${p.appearances} etape</td>
@@ -1607,7 +1619,7 @@ function renderRezervaDenVis(liga, data, accentColor) {
       <div class="card-header"><h3>🪑 Rezerva de Plâns — Liga ${liga}</h3><span class="badge">Puncte exclusiv ca rezervă</span></div>
       <div class="card-body scroll-table">
         <table>
-          <thead><tr><th>#</th><th class="left">Jucător</th><th class="left">Echipă reală</th><th class="left">Nebuliga</th><th class="right">Puncte</th><th class="right">Apariții rezervă</th></tr></thead>
+          <thead><tr><th>#</th><th class="left">Jucător</th><th class="left">Nebuliga</th><th class="right">Puncte</th><th class="right">Apariții rezervă</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
@@ -1740,8 +1752,7 @@ function renderEchipaCard(liga, teamName) {
     .sort((a, b) => (b.starterPts + b.reservePts) - (a.starterPts + a.reservePts) || b.starterApps - a.starterApps)
     .map(p => `
     <tr>
-      <td class="left">${playerNameCell(p.name, p.position)}</td>
-      <td class="left" style="font-size:12px">${getClubFullName(p.abbrev)}</td>
+      <td class="left">${playerNameCell(p.name, p.position, p.abbrev)}</td>
       <td>${p.starterApps}</td>
       <td>${ptsCell(p.starterPts)}</td>
       <td>${p.reserveApps}</td>
