@@ -144,7 +144,8 @@
   .placeholder-logo { width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; font-size: 40px; background: rgba(255,255,255,0.04); border-radius: 12px; }
   .echipa-hero-info { flex: 1; min-width: 200px; }
   .echipa-hero-name { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
-  .echipa-hero-owner { display: flex; align-items: center; gap: 8px; color: var(--text2); font-size: 13px; margin-bottom: 18px; }
+  .echipa-hero-owner { display: flex; align-items: center; gap: 10px; color: var(--text2); font-size: 14px; margin-bottom: 18px; }
+  .owner-photo-hero { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); flex-shrink: 0; }
   .echipa-stats-row { display: flex; flex-wrap: wrap; gap: 10px; }
   .echipa-stat { background: var(--card2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; min-width: 120px; }
   .echipa-stat-label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text2); margin-bottom: 4px; }
@@ -768,11 +769,11 @@ function getTeamConfig(teamName) {
   return config.teams.find(t => t.team_name && t.team_name.toUpperCase() === n) || null;
 }
 
-function getClubFullName(abbrev) {
+function getClubFullName(abbrev, quiet = false) {
   if (!abbrev) return '';
   const full = (config.club_names || {})[abbrev] || (config.club_names || {})[abbrev.toUpperCase()];
-  if (!full) return `<span class="abbrev-unknown" title="Abreviere necunoscută: ${abbrev}">${abbrev} <em style="font-size:10px">(?)</em></span>`;
-  if (full.startsWith('⚠️')) return `<span class="abbrev-warn" title="${full}">${abbrev} <em style="font-size:10px">(?)</em></span>`;
+  if (!full) return quiet ? abbrev : `<span class="abbrev-unknown" title="Abreviere necunoscută: ${abbrev}">${abbrev} <em style="font-size:10px">(?)</em></span>`;
+  if (full.startsWith('⚠️')) return quiet ? abbrev : `<span class="abbrev-warn" title="${full}">${abbrev} <em style="font-size:10px">(?)</em></span>`;
   return full;
 }
 
@@ -1526,7 +1527,7 @@ function renderPortari(liga, ceiMaiBuni, portarulDeVis, accentColor) {
   const rowsBuni = ceiMaiBuni.map((g, i) => `
     <tr>
       ${rankCell(i)}
-      <td class="left" style="font-size:12px">${getClubFullName(g.name)}</td>
+      <td class="left"><div class="cell-with-img">${getClubLogoImg(g.name)}<span>${getClubFullName(g.name, true)}</span></div></td>
       <td class="left">${g.teamsArr.map(t => nebuligaCell(t)).join('<br>')}</td>
       <td>${g.goalsConceded}</td>
       <td>${g.appearances}</td>
@@ -1536,7 +1537,7 @@ function renderPortari(liga, ceiMaiBuni, portarulDeVis, accentColor) {
   const rowsVis = portarulDeVis.map((g, i) => `
     <tr>
       ${rankCell(i)}
-      <td class="left" style="font-size:12px">${getClubFullName(g.name)}</td>
+      <td class="left"><div class="cell-with-img">${getClubLogoImg(g.abbrev || g.name)}<span>${getClubFullName(g.abbrev || g.name, true)}</span></div></td>
       <td class="left">${g.teamsArr.map(t => nebuligaCell(t)).join('<br>')}</td>
       <td>${g.totalConceded}</td>
       <td>${g.appearances}</td>
@@ -1584,7 +1585,10 @@ function renderInspiratieCoef(liga, data, accentColor) {
       <tr>
         ${rankCell(i)}
         <td class="left">
-          <div class="cell-with-img">${teamLogoImg(d.teamName, 'lg')}<div><strong>${d.teamName}</strong><div class="coef-bar"><div class="coef-bar-fill ${barCls}" style="width:${barW}%"></div></div></div></div>
+          <div class="cell-with-img">${teamLogoImg(d.teamName, 'lg')}<strong>${d.teamName}</strong></div>
+        </td>
+        <td style="width:130px;padding:0 10px">
+          <div class="coef-bar"><div class="coef-bar-fill ${barCls}" style="width:${barW}%"></div></div>
         </td>
         <td class="left">${ownerCell(d.teamName, d.owner)}</td>
         <td class="right"><span class="pts-cell ${cls}">${coef > 0 ? '+' : ''}${coef}</span></td>
@@ -1596,7 +1600,7 @@ function renderInspiratieCoef(liga, data, accentColor) {
       <div class="card-header"><h3>💡 Coeficientul de Inspirație — Liga ${liga}</h3><span class="badge">Total sezon</span></div>
       <div class="card-body scroll-table">
         <table>
-          <thead><tr><th>#</th><th class="left">Echipă</th><th class="left">Proprietar</th><th class="right">Coeficient</th></tr></thead>
+          <thead><tr><th>#</th><th class="left">Echipă</th><th style="width:130px">Intensitate</th><th class="left">Manager</th><th class="right">Coeficient</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
@@ -1743,8 +1747,9 @@ function renderEchipaCard(liga, teamName) {
   // Portari
   const gkRows = data.gkPlayers.map(g => `
     <tr>
-      <td class="left"><strong>${getClubFullName(g.abbrev)}</strong> ${posBadge('PORTAR')}</td>
-      <td class="left" style="font-size:11px;color:var(--text2)">${g.abbrev}</td>
+      <td class="left">
+        <div class="cell-with-img">${getClubLogoImg(g.abbrev)}<strong>${getClubFullName(g.abbrev)}</strong>${posBadge('PORTAR')}</div>
+      </td>
       <td>${g.starterApps}</td>
       <td><span style="color:var(--danger)">${g.starterConceded > 0 ? '-' + g.starterConceded : '0'}</span></td>
       <td>${g.reserveApps}</td>
@@ -1797,13 +1802,16 @@ function renderEchipaCard(liga, teamName) {
     <div class="card echipa-main-card" style="margin-bottom:20px">
       <div class="echipa-hero">
         <div class="echipa-hero-logo">
-          ${tc && tc.logo ? `<img src="${tc.logo}" class="team-logo-xl" onerror="this.style.display='none'">` : '<div class="placeholder-logo">🏟️</div>'}
+          ${tc && tc.logo ? `<img src="${tc.logo}" class="team-logo-xl" style="box-shadow:0 0 0 2px ${accentColor}33" onerror="this.style.display='none'">` : '<div class="placeholder-logo" style="border:2px solid ${accentColor}33">🏟️</div>'}
         </div>
         <div class="echipa-hero-info">
           <div class="echipa-hero-name" style="color:${accentColor}">${teamName}</div>
           <div class="echipa-hero-owner">
-            ${tc && tc.owner_photo ? `<img src="${tc.owner_photo}" class="owner-photo" onerror="this.style.display='none'">` : ''}
-            ${ownerDisplay}
+            ${tc && tc.owner_photo ? `<img src="${tc.owner_photo}" class="owner-photo-hero" onerror="this.style.display='none'">` : ''}
+            <div>
+              <div style="font-size:11px;color:var(--text2);margin-bottom:2px;text-transform:uppercase;letter-spacing:0.8px">Manager</div>
+              <div style="color:var(--text);font-weight:600">${ownerDisplay}</div>
+            </div>
           </div>
           <div class="echipa-stats-row">
             <div class="echipa-stat">
@@ -1811,7 +1819,7 @@ function renderEchipaCard(liga, teamName) {
               <span class="echipa-stat-val" style="color:${accentColor}">${posDisplay}</span>
             </div>
             <div class="echipa-stat">
-              <span class="echipa-stat-label">Punctaj</span>
+              <span class="echipa-stat-label">Puncte</span>
               <span class="echipa-stat-val">${ptsDisplay}</span>
             </div>
             <div class="echipa-stat">
@@ -2001,7 +2009,7 @@ function renderStandingsForEtapa(clasData, etapa, liga) {
     return `
     <tr class="${rowClass}">
       ${rankCell(i)}
-      <td class="left">
+      <td class="left" style="cursor:pointer" onclick="navigateToTeam(${liga}, '${s.team.replace(/'/g, "\\'")}')">
         <div class="cell-with-img">${teamLogoImg(s.team)}<strong>${s.team}</strong>${arrow}</div>
       </td>
       <td class="left">${ownerCell(s.team, s.owner)}</td>
@@ -2025,7 +2033,7 @@ function renderStandingsForEtapa(clasData, etapa, liga) {
     </div>` : '';
 
   return `<table>
-    <thead><tr><th class="left">#</th><th class="left">Echipă</th><th class="left">Proprietar</th><th>J</th><th>V</th><th>E</th><th>Î</th><th>Gol.</th><th>Pct</th></tr></thead>
+    <thead><tr><th class="left">#</th><th class="left">Echipă</th><th class="left">Manager</th><th>J</th><th>V</th><th>E</th><th>Î</th><th>Gol.</th><th>Pct</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>${legendL1}${legendL2}`;
 }
