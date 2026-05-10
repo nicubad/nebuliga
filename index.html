@@ -146,6 +146,35 @@
   .echipa-hero-name { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
   .echipa-hero-owner { display: flex; align-items: center; gap: 10px; color: var(--text2); font-size: 14px; margin-bottom: 18px; }
   .owner-photo-hero { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); flex-shrink: 0; }
+
+  /* ── Palmares row ── */
+  .palmares-row { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--text); flex-wrap: wrap; }
+  .palma-badge { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-size: 10px; font-weight: 700; margin-left: 2px; flex-shrink: 0; }
+  .palma-m { background: rgba(130,140,170,0.25); color: #aabbcc; }
+  .palma-v { background: rgba(79,219,139,0.2); color: var(--success); }
+  .palma-e { background: rgba(247,217,79,0.2); color: var(--warn); }
+  .palma-i { background: rgba(247,79,106,0.2); color: var(--danger); }
+
+  /* ── Nav buttons in echipa card ── */
+  .echipa-nav-btns { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .echipa-nav-btn { padding: 5px 14px; border-radius: 6px; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: var(--text2); cursor: pointer; font-size: 12px; font-weight: 500; transition: border-color .15s, color .15s; }
+  .echipa-nav-btn:hover { border-color: var(--accent1); color: var(--accent1); }
+
+  /* ── Echipa Etapei & Rezultate ── */
+  .etapa-score-bar { display: flex; align-items: center; gap: 14px; padding: 12px 18px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .etapa-score-val { font-size: 28px; font-weight: 800; line-height: 1; }
+  .etapa-score-lbl { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; }
+  .etapa-formation { background: rgba(255,255,255,0.06); border-radius: 6px; padding: 4px 12px; font-size: 13px; font-weight: 700; letter-spacing: 1px; }
+
+  /* ── Rezultate row colors ── */
+  .rez-v { background: rgba(79,219,139,0.07) !important; }
+  .rez-e { background: rgba(247,217,79,0.07) !important; }
+  .rez-i { background: rgba(247,79,106,0.07) !important; }
+  .rez-v td.rez-res { color: var(--success); font-weight: 700; }
+  .rez-e td.rez-res { color: var(--warn); font-weight: 700; }
+  .rez-i td.rez-res { color: var(--danger); font-weight: 700; }
+  .rez-row { cursor: pointer; }
+  .rez-row:hover { filter: brightness(1.15); }
   .echipa-stats-row { display: flex; flex-wrap: wrap; gap: 10px; }
   .echipa-stat { background: var(--card2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; min-width: 120px; }
   .echipa-stat-label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text2); margin-bottom: 4px; }
@@ -1686,10 +1715,45 @@ function calcEchipa(liga, teamName) {
   const clasData = state.clasament[liga];
   const etapaKeys = Object.keys(clasData).map(Number).sort((a, b) => b - a);
   let currentPos = null, currentPts = null;
+  const palmares = { played: 0, wins: 0, draws: 0, losses: 0 };
   if (etapaKeys.length > 0) {
     const entry = (clasData[etapaKeys[0]] || []).find(e => e.team === teamName);
-    if (entry) { currentPos = entry.position; currentPts = entry.points; }
+    if (entry) {
+      currentPos = entry.position; currentPts = entry.points;
+      palmares.played = entry.played; palmares.wins = entry.wins;
+      palmares.draws = entry.draws; palmares.losses = entry.losses;
+    }
   }
+
+  // Rezultate per etapă (diff din clasament succesiv)
+  const etapeClasSort = Object.keys(clasData).map(Number).sort((a, b) => a - b);
+  const resultate = [];
+  let prevClas = null;
+  for (const et of etapeClasSort) {
+    const entry = (clasData[et] || []).find(e => e.team === teamName);
+    if (!entry) { prevClas = null; continue; }
+    const tdEt = (etapes[et] || {})[teamName];
+    let calcScore = null;
+    if (tdEt) calcScore = tdEt.fieldTitulars.reduce((s, p) => s + (p.pts || 0), 0) - (tdEt.gkConceded || 0);
+    let result = '—';
+    if (!prevClas) {
+      if (entry.wins > 0) result = 'V';
+      else if (entry.draws > 0) result = 'E';
+      else if (entry.losses > 0) result = 'Î';
+    } else {
+      const dp = entry.played - prevClas.played;
+      if (dp === 1) {
+        if (entry.wins > prevClas.wins) result = 'V';
+        else if (entry.draws > prevClas.draws) result = 'E';
+        else if (entry.losses > prevClas.losses) result = 'Î';
+      } else if (dp > 1) { result = '?'; }
+    }
+    resultate.push({ etapa: et, calcScore, result });
+    prevClas = entry;
+  }
+
+  // Etape disponibile cu date de loturi pt. această echipă
+  const etapeDisp = Object.keys(etapes).map(Number).filter(et => !!(etapes[et] || {})[teamName]).sort((a, b) => a - b);
 
   // Coeficient de inspirație
   const coefData = calcCoeficientInspiratiei(liga);
@@ -1700,7 +1764,103 @@ function calcEchipa(liga, teamName) {
   const bestScorer = [...fieldPlayers].filter(p => p.starterPts > 0).sort((a, b) => b.starterPts - a.starterPts)[0] || null;
   const bestReserve = [...fieldPlayers].filter(p => p.reservePts > 0).sort((a, b) => b.reservePts - a.reservePts)[0] || null;
 
-  return { owner, fieldPlayers, gkPlayers: Object.values(gkStats), currentPos, currentPts, coefTotal, bestScorer, bestReserve };
+  return { owner, fieldPlayers, gkPlayers: Object.values(gkStats), currentPos, currentPts, coefTotal, bestScorer, bestReserve, palmares, resultate, etapeDisp };
+}
+
+// ══════════════════════════════════════════════════════
+// CALC — Echipa Etapei
+// ══════════════════════════════════════════════════════
+function calcEchipaEtapei(liga, teamName, etapa) {
+  const loturi = (state.ligaData[liga] || {}).etapes || {};
+  const td = (loturi[etapa] || {})[teamName];
+  if (!td) return null;
+  const POS_ORDER = { PORTAR: 0, FUNDAS: 1, MIJLOCAS: 2, ATACANT: 3 };
+
+  // GK: caută abrevierea din lot
+  let gkAbbrev = td.gkTitular;
+  for (const [n, e] of Object.entries(td.lot)) {
+    if (e.position === 'PORTAR' && n.toUpperCase() === (td.gkTitular || '').toUpperCase()) {
+      gkAbbrev = e.abbrev; break;
+    }
+  }
+  const starters = [
+    { name: td.gkTitular, abbrev: gkAbbrev, position: 'PORTAR', pts: -td.gkConceded, isPostponed: false }
+  ];
+  for (const tit of td.fieldTitulars) {
+    const lotEntry = td.lot[tit.name] || td.lot[(tit.name || '').toUpperCase()];
+    starters.push({
+      name: tit.name,
+      abbrev: tit.abbrev || (lotEntry ? lotEntry.abbrev : ''),
+      position: lotEntry ? lotEntry.position : '?',
+      pts: tit.pts,
+      isPostponed: !!(lotEntry && lotEntry.postponed)
+    });
+  }
+  starters.sort((a, b) => (POS_ORDER[a.position] ?? 9) - (POS_ORDER[b.position] ?? 9));
+  const calcScore = td.fieldTitulars.reduce((s, p) => s + (p.pts || 0), 0) - (td.gkConceded || 0);
+  return { starters, formation: td.formation, calcScore };
+}
+
+window._echipaCurrentTeam = {};
+window._echipaEtapa = {};
+
+function scrollToEchipaSection(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderEchipaEtapaView(liga, etapaStr) {
+  const teamName = window._echipaCurrentTeam[liga];
+  if (!teamName) return;
+  const etapa = parseInt(etapaStr);
+  window._echipaEtapa[liga] = etapa;
+  const sel = document.getElementById(`etapa-sel-l${liga}`);
+  if (sel) sel.value = etapa;
+
+  const body = document.getElementById(`echipa-etapa-body-l${liga}`);
+  const scoreBar = document.getElementById(`echipa-etapa-score-l${liga}`);
+  if (!body) return;
+
+  const d = calcEchipaEtapei(liga, teamName, etapa);
+  if (!d) {
+    if (scoreBar) scoreBar.innerHTML = '';
+    body.innerHTML = `<div class="empty-state" style="padding:20px">Nu există date de lot pentru etapa ${etapa}.</div>`;
+    return;
+  }
+
+  const scoreColor = d.calcScore > 0 ? 'var(--success)' : d.calcScore < 0 ? 'var(--danger)' : 'var(--text2)';
+  if (scoreBar) {
+    scoreBar.innerHTML = `
+      <div>
+        <div class="etapa-score-lbl">Scor calculat</div>
+        <div class="etapa-score-val" style="color:${scoreColor}">${d.calcScore > 0 ? '+' : ''}${d.calcScore}</div>
+      </div>
+      ${d.formation ? `<div class="etapa-formation">${d.formation}</div>` : ''}
+      <div style="margin-left:auto;color:var(--text2);font-size:12px">${d.starters.length} titulari</div>`;
+  }
+
+  const rows = d.starters.map(p => {
+    const ptsHtml = p.isPostponed
+      ? `<em title="Meci amânat" style="color:var(--warn);cursor:help">R</em>`
+      : `${ptsCell(p.pts)}`;
+    return `<tr>
+      <td class="left"><strong>${getPlayerFullName(p.name)}</strong></td>
+      <td>${posBadge(p.position)}</td>
+      <td class="left"><div class="cell-with-img">${getClubLogoImg(p.abbrev)}<span style="font-size:12px">${getClubFullName(p.abbrev, true)}</span></div></td>
+      <td class="right">${ptsHtml}</td>
+    </tr>`;
+  }).join('');
+
+  body.innerHTML = `<table>
+    <thead><tr><th class="left">Jucător</th><th>Post</th><th class="left">Club</th><th class="right">Pct</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:16px">Fără titulari înregistrați</td></tr>'}</tbody>
+  </table>`;
+}
+
+function onRezultatClick(liga, etapa) {
+  renderEchipaEtapaView(liga, etapa);
+  const card = document.getElementById(`echipa-etapa-card-l${liga}`);
+  if (card) setTimeout(() => card.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
 }
 
 // ══════════════════════════════════════════════════════
@@ -1731,20 +1891,44 @@ function renderEchipePage(liga, accentColor) {
 function renderEchipaCard(liga, teamName) {
   const container = document.getElementById(`echipa-card-l${liga}`);
   if (!container) return;
+
+  // Salvăm echipa curentă pentru funcțiile globale
+  window._echipaCurrentTeam[liga] = teamName;
+
   const data = calcEchipa(liga, teamName);
   const accentColor = liga === 1 ? 'var(--accent1)' : 'var(--accent2)';
   const tc = getTeamConfig(teamName);
 
+  // ── Hero stats ──
   const posDisplay = data.currentPos !== null ? `#${data.currentPos}` : '—';
   const ptsDisplay = data.currentPts !== null ? `${data.currentPts} pct.` : '—';
   const coefVal = data.coefTotal;
   const coefDisplay = coefVal !== null
     ? `<span style="color:${coefVal >= 0 ? 'var(--success)' : 'var(--danger)'}">${coefVal >= 0 ? '+' : ''}${coefVal}</span>`
     : '—';
-
   const ownerDisplay = data.owner || (tc ? tc.owner_name_full : '') || '—';
 
-  // Portari
+  // ── Palmares ──
+  const pal = data.palmares;
+  const palmaresHtml = (pal.played > 0) ? `
+    <div class="palmares-row">
+      ${pal.played} <span class="palma-badge palma-m">M</span>
+      ${pal.wins} <span class="palma-badge palma-v">V</span>
+      ${pal.draws} <span class="palma-badge palma-e">E</span>
+      ${pal.losses} <span class="palma-badge palma-i">Î</span>
+    </div>` : '';
+
+  // ── Golgheter / Rezerva de Plâns cu logo club ──
+  const bestScorerHtml = data.bestScorer
+    ? `<div class="cell-with-img" style="flex-wrap:wrap;gap:4px">${getClubLogoImg(data.bestScorer.abbrev)}<span>${getPlayerFullName(data.bestScorer.name)}</span></div>
+       <div style="color:var(--text2);font-size:11px;font-weight:400;margin-top:2px">${data.bestScorer.starterPts} pct. ca titular</div>`
+    : '—';
+  const bestReserveHtml = data.bestReserve
+    ? `<div class="cell-with-img" style="flex-wrap:wrap;gap:4px">${getClubLogoImg(data.bestReserve.abbrev)}<span>${getPlayerFullName(data.bestReserve.name)}</span></div>
+       <div style="color:var(--text2);font-size:11px;font-weight:400;margin-top:2px">${data.bestReserve.reservePts} pct. ca rezervă</div>`
+    : '—';
+
+  // ── Lot — portari ──
   const gkRows = data.gkPlayers.map(g => `
     <tr>
       <td class="left">
@@ -1757,11 +1941,10 @@ function renderEchipaCard(liga, teamName) {
       <td><span style="color:var(--danger);font-weight:700">${-(g.starterConceded + g.reserveConceded)}</span></td>
     </tr>`).join('');
 
-  // Jucători de câmp — sortare configurabilă
+  // ── Lot — jucători de câmp ──
   const POS_ORDER = { FUNDAS: 1, MIJLOCAS: 2, ATACANT: 3 };
   const POS_LABELS = { FUNDAS: '🛡️ Fundași', MIJLOCAS: '⚡ Mijlocași', ATACANT: '⚽ Atacanți' };
   const currentSort = (window._echipaSort || {})[liga] || 'position';
-
   const sortFns = {
     position:   (a, b) => (POS_ORDER[a.position]||9) - (POS_ORDER[b.position]||9) || b.starterPts - a.starterPts,
     starterApps:(a, b) => b.starterApps - a.starterApps || b.starterPts - a.starterPts,
@@ -1769,7 +1952,6 @@ function renderEchipaCard(liga, teamName) {
     reserveApps:(a, b) => b.reserveApps - a.reserveApps || b.reservePts - a.reservePts,
     reservePts: (a, b) => b.reservePts - a.reservePts || b.reserveApps - a.reserveApps,
   };
-
   const sortedField = [...data.fieldPlayers].sort(sortFns[currentSort] || sortFns.position);
   let lastPos = null;
   const fieldRows = sortedField.map(p => {
@@ -1787,7 +1969,6 @@ function renderEchipaCard(liga, teamName) {
       <td><strong>${ptsCell(p.starterPts + p.reservePts)}</strong></td>
     </tr>`;
   }).join('');
-
   const sortBtns = [
     ['position',    'Poziție (implicit)'],
     ['starterApps', 'Meciuri titular'],
@@ -1798,6 +1979,25 @@ function renderEchipaCard(liga, teamName) {
     `<button class="sort-btn${currentSort === key ? ' active' : ''}" onclick="setEchipaSort(${liga},'${key}')">${label}</button>`
   ).join('');
 
+  // ── Echipa Etapei — dropdown ──
+  const selEtapa = window._echipaEtapa[liga] || data.etapeDisp[data.etapeDisp.length - 1] || null;
+  if (selEtapa) window._echipaEtapa[liga] = selEtapa;
+  const etapeOptions = data.etapeDisp.map(et =>
+    `<option value="${et}"${et === selEtapa ? ' selected' : ''}>Etapa ${et}</option>`
+  ).join('');
+
+  // ── Rezultate ──
+  const rezMap = { V: 'rez-v', E: 'rez-e', 'Î': 'rez-i' };
+  const rezultateRows = data.resultate.map(r => {
+    const cls = rezMap[r.result] || '';
+    const scoreStr = r.calcScore !== null ? `${r.calcScore > 0 ? '+' : ''}${r.calcScore} pct.` : '—';
+    return `<tr class="rez-row ${cls}" onclick="onRezultatClick(${liga}, ${r.etapa})" title="Clic → Echipa Etapei ${r.etapa}">
+      <td>Etapa ${r.etapa}</td>
+      <td>${scoreStr}</td>
+      <td class="rez-res">${r.result}</td>
+    </tr>`;
+  }).join('');
+
   container.innerHTML = `
     <div class="card echipa-main-card" style="margin-bottom:20px">
       <div class="echipa-hero">
@@ -1806,12 +2006,18 @@ function renderEchipaCard(liga, teamName) {
         </div>
         <div class="echipa-hero-info">
           <div class="echipa-hero-name" style="color:${accentColor}">${teamName}</div>
+          ${palmaresHtml}
           <div class="echipa-hero-owner">
             ${tc && tc.owner_photo ? `<img src="${tc.owner_photo}" class="owner-photo-hero" onerror="this.style.display='none'">` : ''}
             <div>
               <div style="font-size:11px;color:var(--text2);margin-bottom:2px;text-transform:uppercase;letter-spacing:0.8px">Manager</div>
               <div style="color:var(--text);font-weight:600">${ownerDisplay}</div>
             </div>
+          </div>
+          <div class="echipa-nav-btns">
+            <button class="echipa-nav-btn" onclick="scrollToEchipaSection('lot-l${liga}')">📋 Lot</button>
+            <button class="echipa-nav-btn" onclick="scrollToEchipaSection('echipa-etapa-card-l${liga}')">🔢 Echipa Etapei</button>
+            <button class="echipa-nav-btn" onclick="scrollToEchipaSection('rezultate-l${liga}')">📅 Rezultate</button>
           </div>
           <div class="echipa-stats-row">
             <div class="echipa-stat">
@@ -1828,22 +2034,18 @@ function renderEchipaCard(liga, teamName) {
             </div>
             <div class="echipa-stat">
               <span class="echipa-stat-label">Golgheter</span>
-              <span class="echipa-stat-val" style="font-size:13px;line-height:1.3">
-                ${data.bestScorer ? `${data.bestScorer.name}<br><span style="color:var(--text2);font-size:11px;font-weight:400">${data.bestScorer.starterPts} pct. ca titular</span>` : '—'}
-              </span>
+              <span class="echipa-stat-val" style="font-size:13px;line-height:1.4">${bestScorerHtml}</span>
             </div>
             <div class="echipa-stat">
               <span class="echipa-stat-label">Rezerva de Plâns</span>
-              <span class="echipa-stat-val" style="font-size:13px;line-height:1.3">
-                ${data.bestReserve ? `${data.bestReserve.name}<br><span style="color:var(--text2);font-size:11px;font-weight:400">${data.bestReserve.reservePts} pct. ca rezervă</span>` : '—'}
-              </span>
+              <span class="echipa-stat-val" style="font-size:13px;line-height:1.4">${bestReserveHtml}</span>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="lot-l${liga}" style="margin-bottom:20px">
       <div class="card-header"><h3>📋 Lotul — ${teamName}</h3><span class="badge">Sezon complet</span></div>
       <div class="sort-bar"><span>Sortare:</span>${sortBtns}</div>
       <div class="card-body scroll-table">
@@ -1864,7 +2066,30 @@ function renderEchipaCard(liga, teamName) {
           </tbody>
         </table>
       </div>
+    </div>
+
+    <div class="card" id="echipa-etapa-card-l${liga}" style="margin-bottom:20px">
+      <div class="card-header">
+        <h3>🔢 Echipa Etapei</h3>
+        ${etapeOptions ? `<select id="etapa-sel-l${liga}" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 10px;font-size:13px;cursor:pointer"
+          onchange="renderEchipaEtapaView(${liga}, this.value)">${etapeOptions}</select>` : '<span class="badge">Fără date</span>'}
+      </div>
+      <div class="etapa-score-bar" id="echipa-etapa-score-l${liga}"></div>
+      <div class="card-body scroll-table" id="echipa-etapa-body-l${liga}"></div>
+    </div>
+
+    <div class="card" id="rezultate-l${liga}">
+      <div class="card-header"><h3>📅 Rezultate</h3><span class="badge">${data.resultate.length} meciuri</span></div>
+      <div class="card-body scroll-table">
+        <table>
+          <thead><tr><th>Etapă</th><th>Scor</th><th>Rez.</th></tr></thead>
+          <tbody>${rezultateRows || '<tr><td colspan="3" style="text-align:center;color:var(--text2);padding:16px">Fără date de clasament</td></tr>'}</tbody>
+        </table>
+      </div>
     </div>`;
+
+  // Randăm Echipa Etapei pentru etapa selectată
+  if (selEtapa) renderEchipaEtapaView(liga, selEtapa);
 }
 
 // ══════════════════════════════════════════════════════
