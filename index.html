@@ -557,25 +557,11 @@
     /* Poza proprietar: ascunsă în clasament (col 3 deja ascunsă) și minimizată în alte tabele */
     .owner-photo { width: 22px; height: 22px; margin-right: 4px; }
 
-    /* ── Tabele statistici: column hiding ── */
+    /* Tabele statistici: toate coloanele vizibile pe mobile (scroll orizontal prin scroll-table) */
 
-    /* Golgheter Ligii + Golgheter Poziții: ascunde coloana 3 (Meciuri) pe mobile */
-    [id$="-golgheter-content"] table th:nth-child(4),
-    [id$="-golgheter-content"] table td:nth-child(4),
-    [id$="-pozitii-content"] table th:nth-child(4),
-    [id$="-pozitii-content"] table td:nth-child(4) { display: none; }
-
-    /* Portari: ascunde coloana 5 (Et. tit. / Etape) — Gol. prim. + Medie rămân */
-    [id$="-portari-content"] table th:nth-child(5),
-    [id$="-portari-content"] table td:nth-child(5) { display: none; }
-
-    /* Coeficient Inspirație: ascunde coloana 3 (Proprietar) */
+    /* Coeficient Inspirație: ascunde coloana Manager pe mobile (nu e relevant în context) */
     [id$="-inspiratie-content"] table th:nth-child(3),
     [id$="-inspiratie-content"] table td:nth-child(3) { display: none; }
-
-    /* Rezerva de Plâns: ascunde coloana 4 (Apariții) pe mobile */
-    [id$="-rezerve-content"] table th:nth-child(4),
-    [id$="-rezerve-content"] table td:nth-child(4) { display: none; }
 
     /* ── Grafice Chart.js — ascunse pe mobil ── */
     .chart-wrap {
