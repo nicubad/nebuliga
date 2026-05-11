@@ -668,7 +668,6 @@
         <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#a855f7;opacity:0.85;vertical-align:middle;margin-right:4px"></span>Doar clasament</span>
         <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#f74f6a;opacity:0.85;vertical-align:middle;margin-right:4px"></span>Eroare parsare</span>
         <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(255,255,255,0.08);vertical-align:middle;margin-right:4px"></span>Lipsă</span>
-        <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.12);vertical-align:middle;margin-right:4px"></span>Gap așteptat (E4)</span>
       </div>
       <div id="diag-l1" style="margin-bottom:18px"></div>
       <div id="diag-l2"></div>
@@ -895,7 +894,9 @@ function processFileText(filename, text) {
     } else if (info.isClasament) {
       const standings = parseClasamentCSV(text, info.etapa, info.liga);
       state.clasament[info.liga][info.etapa] = standings;
-      state.files.push({ name: filename, type: 'clasament', liga: info.liga, etapa: info.etapa, status: 'ok', message: `${standings.length} echipe` });
+      const clasStatus = standings.length > 0 ? 'ok' : 'err';
+      const clasMsg    = standings.length > 0 ? `${standings.length} echipe` : 'Structură nerecunoscută — 0 echipe parsate';
+      state.files.push({ name: filename, type: 'clasament', liga: info.liga, etapa: info.etapa, status: clasStatus, message: clasMsg });
     }
   } catch (err) {
     state.errors.push(`${filename}: ${err.message}`);
@@ -1015,7 +1016,6 @@ function renderDiagnostic() {
     if (f.type === 'clasament') idx[`clas-${f.liga}-${f.etapa}`] = f.status;
   });
 
-  const EXPECTED_GAP = 4; // etapa 4 lipsește prin design
   const MAX_ETAPA = 31;
 
   function buildGrid(liga) {
@@ -1030,10 +1030,7 @@ function renderDiagnostic() {
       const hasErr  = lotStatus === 'err' || clasStatus === 'err';
 
       let bg, title;
-      if (et === EXPECTED_GAP) {
-        bg = 'rgba(255,255,255,0.03)';
-        title = 'Etapa 4 — gap acceptat (lipsește din date)';
-      } else if (hasErr) {
+      if (hasErr) {
         bg = 'rgba(247,79,106,0.7)';
         const errPart = [lotStatus==='err'?'lot':null, clasStatus==='err'?'clasament':null].filter(Boolean).join(' + ');
         title = `E${et} — EROARE parsare (${errPart})`;
@@ -1052,8 +1049,8 @@ function renderDiagnostic() {
         title = `E${et} — Niciun fișier încărcat`;
       }
 
-      const borderStyle = et === EXPECTED_GAP ? 'border:1px dashed rgba(255,255,255,0.15);' : '';
-      const textColor   = (hasErr || hasLot || hasClas) && et !== EXPECTED_GAP ? '#fff' : 'var(--text2)';
+      const borderStyle = '';
+      const textColor   = (hasErr || hasLot || hasClas) ? '#fff' : 'var(--text2)';
       html += `<div title="${title}" style="width:36px;height:36px;border-radius:6px;background:${bg};${borderStyle}display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${textColor};cursor:default;user-select:none">${et}</div>`;
     }
     html += `</div>`;
@@ -1064,7 +1061,6 @@ function renderDiagnostic() {
   function countMissing(liga) {
     let missing = 0;
     for (let et = 1; et <= MAX_ETAPA; et++) {
-      if (et === EXPECTED_GAP) continue;
       if (!idx[`lot-${liga}-${et}`] && !idx[`clas-${liga}-${et}`]) missing++;
     }
     return missing;
@@ -1293,13 +1289,27 @@ function parseClasamentCSV(csvText, etapa, liga) {
   const parsed = Papa.parse(csvText, { skipEmptyLines: false });
   const rows = parsed.data;
   const standings = [];
-  for (let i = 2; i <= 17; i++) {
+
+  // Detectăm dinamic rândul de start: primul rând unde col 17 e număr 1-16
+  // și col 18 e un string nevid (numele echipei). Astfel suntem robuști la
+  // fișiere cu rânduri extra de header sau linii goale la început.
+  let dataStart = -1;
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    const row = rows[i];
+    if (!row) continue;
+    const pos  = parseInt(row[17]);
+    const team = safeStr(row[18]);
+    if (!isNaN(pos) && pos >= 1 && pos <= 16 && team) { dataStart = i; break; }
+  }
+  if (dataStart === -1) return standings; // structură nerecunoscută
+
+  for (let i = dataStart; i < Math.min(dataStart + 16, rows.length); i++) {
     const row = rows[i];
     if (!row || !row[18]) continue;
     const team = safeStr(row[18]);
     if (!team) continue;
     standings.push({
-      position: parseInt(row[17]) || (i - 1),
+      position: parseInt(row[17]) || (i - dataStart + 1),
       team, owner: safeStr(row[19]),
       played: parseInt(row[20]) || 0,
       wins: parseInt(row[21]) || 0,
