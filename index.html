@@ -33,6 +33,9 @@
   .sidebar-title { padding: 0 20px 20px; font-size: 18px; font-weight: 700; color: var(--accent1); letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
   .sidebar-title span { display: block; font-size: 11px; color: var(--text2); font-weight: 400; margin-top: 3px; }
   .nav-section { padding: 14px 0 4px 20px; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text2); }
+  .nav-section-liga { margin: 8px 10px 4px; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+  .nav-section-liga.l1 { background: rgba(79,142,247,0.15); color: var(--accent1); border-left: 3px solid var(--accent1); }
+  .nav-section-liga.l2 { background: rgba(247,161,79,0.15); color: var(--accent2); border-left: 3px solid var(--accent2); }
   .nav-btn { display: block; width: 100%; padding: 9px 20px; text-align: left; background: none; border: none; color: var(--text2); cursor: pointer; font-size: 13px; transition: all 0.15s; border-left: 3px solid transparent; }
   .nav-btn:hover { color: var(--text); background: rgba(255,255,255,0.04); }
   .nav-btn.active { color: var(--text); border-left-color: var(--accent1); background: rgba(79,142,247,0.08); font-weight: 600; }
@@ -170,11 +173,11 @@
   .rez-v { background: rgba(79,219,139,0.07) !important; }
   .rez-e { background: rgba(247,217,79,0.07) !important; }
   .rez-i { background: rgba(247,79,106,0.07) !important; }
-  .rez-v td.rez-res { color: var(--success); font-weight: 700; }
-  .rez-e td.rez-res { color: var(--warn); font-weight: 700; }
-  .rez-i td.rez-res { color: var(--danger); font-weight: 700; }
   .rez-row { cursor: pointer; }
   .rez-row:hover { filter: brightness(1.15); }
+  .rez-sistem { background: rgba(255,255,255,0.07); border-radius:5px; padding:2px 8px; font-size:12px; font-weight:700; letter-spacing:0.5px; }
+  .rez-marcator { display:inline-flex; align-items:center; gap:4px; margin-right:6px; font-size:12px; white-space:nowrap; }
+  .rez-pts-badge { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:rgba(79,219,139,0.25); color:var(--success); font-size:10px; font-weight:700; }
   .echipa-stats-row { display: flex; flex-wrap: wrap; gap: 10px; }
   .echipa-stat { background: var(--card2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; min-width: 120px; }
   .echipa-stat-label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text2); margin-bottom: 4px; }
@@ -568,15 +571,9 @@
     [id$="-rezerve-content"] table th:nth-child(4),
     [id$="-rezerve-content"] table td:nth-child(4) { display: none; }
 
-    /* ── Grafice Chart.js ── */
+    /* ── Grafice Chart.js — ascunse pe mobil ── */
     .chart-wrap {
-      padding: 12px;
-      margin-bottom: 16px;
-      height: 270px;        /* containerul total inclusiv padding */
-    }
-
-    .chart-wrap canvas {
-      max-height: 220px;
+      display: none;
     }
 
   } /* end @media mobile */
@@ -600,10 +597,10 @@
 
 <!-- Sidebar -->
 <nav id="sidebar">
-  <div class="sidebar-title" onclick="showPage('upload')" style="cursor:pointer" title="Click pentru upload date">⚽ Nebuliga<span>Fantasy Football Dashboard</span></div>
+  <div class="sidebar-title" onclick="showPage('upload')" style="cursor:pointer" title="Click pentru upload date">⚽ Nebuliga</div>
   <div class="nav-scroll">
   <button class="nav-btn" style="display:none" onclick="showPage('upload')">📂 Upload date</button>
-  <div class="nav-section">Liga 1</div>
+  <div class="nav-section-liga l1">⚽ Liga 1</div>
   <button class="nav-btn active" onclick="showPage('l1-clasament')">📈 Clasament</button>
   <button class="nav-btn" onclick="showPage('l1-echipe')">🏟️ Echipe</button>
   <button class="nav-btn" onclick="showPage('l1-golgheter')">🏅 Golgheterul Ligii</button>
@@ -611,7 +608,7 @@
   <button class="nav-btn" onclick="showPage('l1-portari')">🧤 Portari</button>
   <button class="nav-btn" onclick="showPage('l1-inspiratie')">💡 Coef. Inspirație</button>
   <button class="nav-btn" onclick="showPage('l1-rezerve')">🪑 Rezerva de Plâns</button>
-  <div class="nav-section">Liga 2</div>
+  <div class="nav-section-liga l2">⚽ Liga 2</div>
   <button class="nav-btn liga2" onclick="showPage('l2-clasament')">📈 Clasament</button>
   <button class="nav-btn liga2" onclick="showPage('l2-echipe')">🏟️ Echipe</button>
   <button class="nav-btn liga2" onclick="showPage('l2-golgheter')">🏅 Golgheterul Ligii</button>
@@ -1554,9 +1551,9 @@ function playerNameCell(name, position, abbrev) {
   const fullName = getPlayerFullName(name);
   const logoHtml = abbrev ? getClubLogoImg(abbrev) : '';
   if (postponedPlayerNames.has(name.toUpperCase())) {
-    return `<div class="cell-with-img"><span class="player-postponed" title="Meci amânat în cel puțin o etapă">${logoHtml}<em>${fullName}</em>${posBadge(position)}</span></div>`;
+    return `<div class="cell-with-img"><span class="player-postponed" title="Meci amânat în cel puțin o etapă">${posBadge(position)}${logoHtml}<em>${fullName}</em></span></div>`;
   }
-  return `<div class="cell-with-img">${logoHtml}<strong>${fullName}</strong>${posBadge(position)}</div>`;
+  return `<div class="cell-with-img">${posBadge(position)}${logoHtml}<strong>${fullName}</strong></div>`;
 }
 
 // ── Render Nebuliga team cell (logo + name, clickabil dacă liga e known) ──
@@ -1879,7 +1876,14 @@ function calcEchipa(liga, teamName) {
       }
       prevClas = entry;
     }
-    resultate.push({ etapa: et, calcScore, fieldPts, gkConc, result });
+    // Marcatori: titulari cu pts > 0
+    const marcatori = tdEt
+      ? tdEt.fieldTitulars.filter(p => (p.pts || 0) > 0).map(p => ({ name: p.name, pts: p.pts, abbrev: p.abbrev || '' }))
+      : [];
+    // Formație și loc în clasament
+    const formation = tdEt ? (tdEt.formation || null) : null;
+    const position  = entry ? entry.position : null;
+    resultate.push({ etapa: et, calcScore, fieldPts, gkConc, result, marcatori, formation, position });
   }
 
   // Etape disponibile cu date de loturi pt. această echipă
@@ -1972,7 +1976,7 @@ function renderEchipaEtapaView(liga, etapaStr) {
     scoreBar.innerHTML = `
       <div>
         <div class="etapa-score-lbl">Scor</div>
-        <div class="etapa-score-val" style="color:${scoreColor}">${d.fieldPts}<span style="color:var(--text2);font-size:18px;font-weight:400;margin:0 4px">–</span>${d.gkConc}</div>
+        <div class="etapa-score-val" style="color:${scoreColor};display:flex;align-items:center;gap:6px">${d.fieldPts}<span style="color:var(--text2);font-size:20px;font-weight:300;line-height:1">–</span>${d.gkConc}</div>
       </div>
       ${fmt ? `<div><div class="etapa-score-lbl">Sistem de Joc</div><div class="etapa-formation">${fmt}</div></div>` : ''}
       <div style="margin-left:auto;color:var(--text2);font-size:12px">${d.starters.length} titulari</div>`;
@@ -2079,7 +2083,7 @@ function renderEchipaCard(liga, teamName) {
   const gkRows = data.gkPlayers.map(g => `
     <tr>
       <td class="left">
-        <div class="cell-with-img">${getClubLogoImg(g.abbrev)}<strong>${getClubFullName(g.abbrev)}</strong>${posBadge('PORTAR')}</div>
+        <div class="cell-with-img">${posBadge('PORTAR')}${getClubLogoImg(g.abbrev)}<strong>${getClubFullName(g.abbrev)}</strong></div>
       </td>
       <td>${g.starterApps}</td>
       <td><span style="color:var(--danger)">${g.starterConceded > 0 ? '-' + g.starterConceded : '0'}</span></td>
@@ -2134,18 +2138,27 @@ function renderEchipaCard(liga, teamName) {
   ).join('');
 
   // ── Rezultate ──
-  const rezMap = { V: 'rez-v', E: 'rez-e', 'Î': 'rez-i' };
+  const rezMap      = { V: 'rez-v', E: 'rez-e', 'Î': 'rez-i' };
   const rezColorMap = { V: 'var(--success)', E: 'var(--warn)', 'Î': 'var(--danger)' };
   const rezultateRows = data.resultate.map(r => {
-    const cls = rezMap[r.result] || '';
+    const cls        = rezMap[r.result] || '';
     const scoreColor = rezColorMap[r.result] || 'var(--text2)';
-    const scoreStr = r.fieldPts !== null
-      ? `<span style="color:${scoreColor};font-weight:600">${r.fieldPts}–${r.gkConc}</span>`
+    const scoreStr   = r.fieldPts !== null
+      ? `<span style="display:inline-flex;align-items:center;gap:3px;font-weight:700;color:${scoreColor}">${r.fieldPts}<span style="color:var(--text2);font-size:13px;font-weight:400">–</span>${r.gkConc}</span>`
       : '<span style="color:var(--text2)">—</span>';
+    const sistemStr  = r.formation ? `<span class="rez-sistem">${formatFormation(r.formation)}</span>` : '—';
+    const posStr     = r.position  ? `<strong>#${r.position}</strong>` : '—';
+    const marcatoriStr = r.marcatori && r.marcatori.length
+      ? r.marcatori.map(m =>
+          `<span class="rez-marcator">${getClubLogoImg(m.abbrev)}<span>${m.name}${m.pts > 1 ? ` <span class="rez-pts-badge">${m.pts}</span>` : ''}</span></span>`
+        ).join('')
+      : '<span style="color:var(--text2);font-size:12px">—</span>';
     return `<tr class="rez-row ${cls}" onclick="onRezultatClick(${liga}, ${r.etapa})" title="Clic → Echipa Etapei ${r.etapa}">
-      <td>Etapa ${r.etapa}</td>
+      <td style="font-weight:700;color:var(--text2)">${r.etapa}</td>
+      <td>${sistemStr}</td>
       <td>${scoreStr}</td>
-      <td class="rez-res">${r.result}</td>
+      <td class="left" style="min-width:140px">${marcatoriStr}</td>
+      <td>${posStr}</td>
     </tr>`;
   }).join('');
 
@@ -2234,8 +2247,8 @@ function renderEchipaCard(liga, teamName) {
       <div class="card-header"><h3>📅 Rezultate</h3><span class="badge">${data.resultate.length} meciuri</span></div>
       <div class="card-body scroll-table">
         <table>
-          <thead><tr><th>Etapă</th><th>Scor</th><th>Rez.</th></tr></thead>
-          <tbody>${rezultateRows || '<tr><td colspan="3" style="text-align:center;color:var(--text2);padding:16px">Fără date de clasament</td></tr>'}</tbody>
+          <thead><tr><th>Etapă</th><th>Sistem</th><th>Scor</th><th class="left">Marcatori</th><th>Clasament</th></tr></thead>
+          <tbody>${rezultateRows || '<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:16px">Fără date de clasament</td></tr>'}</tbody>
         </table>
       </div>
     </div>`;
