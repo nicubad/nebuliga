@@ -559,9 +559,36 @@
 
     /* Tabele statistici: toate coloanele vizibile pe mobile (scroll orizontal prin scroll-table) */
 
-    /* Coeficient Inspirație: ascunde coloana Manager pe mobile (nu e relevant în context) */
+    /* Coeficient Inspirație: ascunde coloana Manager pe mobile */
     [id$="-inspiratie-content"] table th:nth-child(3),
     [id$="-inspiratie-content"] table td:nth-child(3) { display: none; }
+
+    /* ── Clasament mobil: mod compact (default) ── */
+    /* Vizibile: # (1), Echipă (2), Pct (9) — ascunde col 3-8 */
+    [id^="standings-table-l"]:not(.clasament-extins) th:nth-child(3),
+    [id^="standings-table-l"]:not(.clasament-extins) td:nth-child(3),
+    [id^="standings-table-l"]:not(.clasament-extins) th:nth-child(4),
+    [id^="standings-table-l"]:not(.clasament-extins) td:nth-child(4),
+    [id^="standings-table-l"]:not(.clasament-extins) th:nth-child(5),
+    [id^="standings-table-l"]:not(.clasament-extins) td:nth-child(5),
+    [id^="standings-table-l"]:not(.clasament-extins) th:nth-child(6),
+    [id^="standings-table-l"]:not(.clasament-extins) td:nth-child(6),
+    [id^="standings-table-l"]:not(.clasament-extins) th:nth-child(7),
+    [id^="standings-table-l"]:not(.clasament-extins) td:nth-child(7),
+    [id^="standings-table-l"]:not(.clasament-extins) th:nth-child(8),
+    [id^="standings-table-l"]:not(.clasament-extins) td:nth-child(8) { display: none; }
+
+    /* Mod extins: toate coloanele vizibile, scroll orizontal */
+    [id^="standings-table-l"].clasament-extins { overflow-x: auto; display: block; }
+    [id^="standings-table-l"].clasament-extins th,
+    [id^="standings-table-l"].clasament-extins td { display: table-cell !important; }
+
+    /* Mod compact: ellipsis pentru numele echipei */
+    [id^="standings-table-l"]:not(.clasament-extins) .cell-with-img { max-width: 180px; overflow: hidden; }
+    [id^="standings-table-l"]:not(.clasament-extins) .cell-with-img strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; max-width: 140px; }
+
+    /* Buton "Vezi Tot" în header clasament */
+    .btn-extinde-clas { padding: 4px 10px; font-size: 11px; border-radius: 6px; border: 1px solid var(--border); background: var(--card2); color: var(--text2); cursor: pointer; margin-left: auto; white-space: nowrap; }
 
     /* ── Grafice Chart.js — ascunse pe mobil ── */
     .chart-wrap {
@@ -600,6 +627,7 @@
   <button class="nav-btn" onclick="showPage('l1-portari')">🧤 Portari</button>
   <button class="nav-btn" onclick="showPage('l1-inspiratie')">💡 Coef. Inspirație</button>
   <button class="nav-btn" onclick="showPage('l1-rezerve')">🪑 Rezerva de Plâns</button>
+  <button class="nav-btn" onclick="showPage('l1-serii')">🔥 Serii Consecutive</button>
   <div class="nav-section-liga l2">⚽ Liga 2</div>
   <button class="nav-btn liga2" onclick="showPage('l2-clasament')">📈 Clasament</button>
   <button class="nav-btn liga2" onclick="showPage('l2-echipe')">🏟️ Echipe</button>
@@ -608,6 +636,9 @@
   <button class="nav-btn liga2" onclick="showPage('l2-portari')">🧤 Portari</button>
   <button class="nav-btn liga2" onclick="showPage('l2-inspiratie')">💡 Coef. Inspirație</button>
   <button class="nav-btn liga2" onclick="showPage('l2-rezerve')">🪑 Rezerva de Plâns</button>
+  <button class="nav-btn liga2" onclick="showPage('l2-serii')">🔥 Serii Consecutive</button>
+  <div class="nav-section-liga" style="background:rgba(255,255,255,0.06);color:var(--text);border-left:3px solid var(--text2)">🌍 General</div>
+  <button class="nav-btn" onclick="showPage('general-clasament')">📊 Clasament General</button>
   </div><!-- /nav-scroll -->
 </nav>
 
@@ -747,6 +778,27 @@
     <div id="l2-clasament-content"></div>
   </div>
 
+  <!-- ══ LIGA 1 — Serii Consecutive ══ -->
+  <div id="page-l1-serii" class="page">
+    <div class="page-title">🔥 Serii Consecutive — Liga 1</div>
+    <div class="page-sub">Cele mai lungi serii consecutive înregistrate de echipe pe parcursul sezonului.</div>
+    <div id="l1-serii-content"></div>
+  </div>
+
+  <!-- ══ LIGA 2 — Serii Consecutive ══ -->
+  <div id="page-l2-serii" class="page">
+    <div class="page-title" style="color:var(--accent2)">🔥 Serii Consecutive — Liga 2</div>
+    <div class="page-sub">Cele mai lungi serii consecutive înregistrate de echipe pe parcursul sezonului.</div>
+    <div id="l2-serii-content"></div>
+  </div>
+
+  <!-- ══ Clasament General ══ -->
+  <div id="page-general-clasament" class="page">
+    <div class="page-title">🌍 Clasament General</div>
+    <div class="page-sub">Toate echipele din ambele ligi, ordonate după puncte, golaveraj, goluri marcate și victorii.</div>
+    <div id="general-clasament-content"></div>
+  </div>
+
   <!-- ══ LIGA 1 — Echipe ══ -->
   <div id="page-l1-echipe" class="page">
     <div class="page-title">🏟️ Echipe — Liga 1</div>
@@ -783,6 +835,7 @@ const state = {
 
 const chartInstances = {};
 const posFilters = { 1: 'ATACANT', 2: 'ATACANT' };
+const seriiFilters = { 1: 'victorii', 2: 'victorii' };
 const sliderState = { 1: null, 2: null }; // null = ultima etapă
 const teamLigaMap = {}; // teamName → liga (1 sau 2), built in calculateAll
 const postponedPlayerNames = new Set(); // player names (UPPERCASE) cu cel puțin un meci amânat
@@ -1464,6 +1517,241 @@ function calcPortarulDeVis(liga) {
 // ══════════════════════════════════════════════════════
 // MAIN CALCULATE
 // ══════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
+// CALC — Autogoluri
+// ══════════════════════════════════════════════════════
+function calcAutogoluri(liga) {
+  const etapes = state.ligaData[liga].etapes;
+  const playerMap = {};
+  for (const etapaData of Object.values(etapes)) {
+    for (const [team, td] of Object.entries(etapaData)) {
+      for (const [name, p] of Object.entries(td.lot || {})) {
+        if (p.position === 'PORTAR') continue;
+        const pts = p.pts || 0;
+        if (pts < 0) {
+          if (!playerMap[name]) {
+            playerMap[name] = { name, abbrev: p.abbrev || '', position: p.position, teams: new Set(), totalAG: 0, appearances: 0 };
+          }
+          playerMap[name].totalAG += Math.abs(pts);
+          playerMap[name].teams.add(team);
+          playerMap[name].appearances++;
+        }
+      }
+    }
+  }
+  return Object.values(playerMap)
+    .map(p => ({ ...p, teams: [...p.teams] }))
+    .sort((a, b) => b.totalAG - a.totalAG);
+}
+
+// ══════════════════════════════════════════════════════
+// CALC + RENDER — Serii Consecutive
+// ══════════════════════════════════════════════════════
+function calcSeriiConsecutive(liga, tip) {
+  const clasData = state.clasament[liga];
+  const etapes = Object.keys(clasData).map(Number).sort((a, b) => a - b);
+  if (etapes.length < 2) return [];
+
+  const teamHistory = {};
+  for (let i = 1; i < etapes.length; i++) {
+    const prevS = clasData[etapes[i - 1]];
+    const currS = clasData[etapes[i]];
+    for (const curr of currS) {
+      const prev = prevS.find(s => s.team === curr.team);
+      if (!prev) continue;
+      const dW  = (curr.wins || 0)        - (prev.wins || 0);
+      const dD  = (curr.draws || 0)       - (prev.draws || 0);
+      const dL  = (curr.losses || 0)      - (prev.losses || 0);
+      const dGF = (curr.goalsFor || 0)    - (prev.goalsFor || 0);
+      let result = null;
+      if      (dW === 1) result = 'W';
+      else if (dD === 1) result = 'D';
+      else if (dL === 1) result = 'L';
+      if (!teamHistory[curr.team]) teamHistory[curr.team] = { owner: curr.owner, matches: [] };
+      teamHistory[curr.team].matches.push({ etapa: etapes[i], result, goalsFor: dGF });
+    }
+  }
+
+  const results = [];
+  for (const [team, data] of Object.entries(teamHistory)) {
+    let maxStreak = 0, curStreak = 0, curStart = null, maxStart = null, maxEnd = null;
+    for (const m of data.matches) {
+      let q = false;
+      if      (tip === 'victorii'   && m.result === 'W') q = true;
+      else if (tip === 'infrangeri' && m.result === 'L') q = true;
+      else if (tip === 'gol_marcat' && m.result !== null && m.goalsFor > 0)  q = true;
+      else if (tip === 'fara_gol'   && m.result !== null && m.goalsFor === 0) q = true;
+
+      if (q) {
+        if (curStreak === 0) curStart = m.etapa;
+        curStreak++;
+        if (curStreak > maxStreak) { maxStreak = curStreak; maxStart = curStart; maxEnd = m.etapa; }
+      } else if (m.result !== null) {
+        curStreak = 0; curStart = null;
+      }
+    }
+    if (maxStreak > 0) results.push({ team, owner: data.owner, maxStreak, maxStart, maxEnd });
+  }
+  return results.sort((a, b) => b.maxStreak - a.maxStreak);
+}
+
+function filterSeriiConsecutive(liga, tip) {
+  seriiFilters[liga] = tip;
+  renderSeriiConsecutive(liga, liga === 1 ? 'var(--accent1)' : 'var(--accent2)');
+}
+
+function renderSeriiConsecutive(liga, accentColor) {
+  const container = document.getElementById(`l${liga}-serii-content`);
+  const clasData = state.clasament[liga];
+  if (!Object.keys(clasData).length) {
+    container.innerHTML = emptyState('Nu există date de clasament pentru Liga ' + liga + '.');
+    return;
+  }
+  const tabs = [
+    { tip: 'victorii',   label: 'Victorii',            icon: '🏆', color: 'var(--success)' },
+    { tip: 'infrangeri', label: 'Înfrângeri',           icon: '❌', color: 'var(--danger)'  },
+    { tip: 'gol_marcat', label: 'Meciuri cu Gol',       icon: '⚽', color: 'var(--accent1)' },
+    { tip: 'fara_gol',   label: 'Fără Gol Marcat',     icon: '🧱', color: 'var(--text2)'   }
+  ];
+  const labelMap = {
+    victorii:   'Victorii Consecutive',
+    infrangeri: 'Înfrângeri Consecutive',
+    gol_marcat: 'Meciuri Consecutive cu Gol Marcat',
+    fara_gol:   'Meciuri Consecutive Fără Gol Marcat'
+  };
+  const currentTip = seriiFilters[liga];
+  const current = tabs.find(t => t.tip === currentTip) || tabs[0];
+
+  const selectorHtml = `
+    <div class="pos-selector">
+      ${tabs.map(t => `<button class="pos-btn${t.tip === currentTip ? ' active' : ''}" onclick="filterSeriiConsecutive(${liga}, '${t.tip}')">${t.icon} ${t.label}</button>`).join('')}
+    </div>`;
+
+  const data = calcSeriiConsecutive(liga, currentTip);
+  if (!data.length) {
+    container.innerHTML = selectorHtml + emptyState(`Fără date pentru ${current.label}.`);
+    return;
+  }
+
+  const rows = data.map((item, i) => {
+    const streakBadge = `<span style="background:${current.color}22;color:${current.color};border:1px solid ${current.color}44;border-radius:20px;padding:3px 12px;font-weight:700;font-size:14px">${item.maxStreak}</span>`;
+    const periodStr = item.maxStart !== null && item.maxEnd !== null
+      ? `<span style="color:var(--text2);font-size:11px">Et. ${item.maxStart}–${item.maxEnd}</span>` : '';
+    return `
+      <tr>
+        ${rankCell(i)}
+        <td class="left"><div class="cell-with-img">${teamLogoImg(item.team)}<strong>${item.team}</strong></div></td>
+        <td class="left">${ownerCell(item.team, item.owner)}</td>
+        <td style="text-align:center">${streakBadge}</td>
+        <td style="text-align:center">${periodStr}</td>
+      </tr>`;
+  }).join('');
+
+  container.innerHTML = selectorHtml + `
+    <div class="card">
+      <div class="card-header">
+        <h3>${current.icon} ${labelMap[currentTip]} — Liga ${liga}</h3>
+        <span class="badge">Maxim în sezon</span>
+      </div>
+      <div class="card-body scroll-table">
+        <table>
+          <thead><tr><th class="left">#</th><th class="left">Echipă</th><th class="left">Manager</th><th>Șir</th><th>Etape</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// CALC + RENDER — Clasament General (ambele ligi)
+// ══════════════════════════════════════════════════════
+function calcClasamentGeneral() {
+  const result = [];
+  for (const liga of [1, 2]) {
+    const clasData = state.clasament[liga];
+    const etapes = Object.keys(clasData).map(Number).sort((a, b) => a - b);
+    if (!etapes.length) continue;
+    const lastEt = etapes[etapes.length - 1];
+    for (const s of clasData[lastEt]) result.push({ ...s, liga, lastEtapa: lastEt });
+  }
+  result.sort((a, b) => {
+    const aGA = (a.goalsFor || 0) - (a.goalsAgainst || 0);
+    const bGA = (b.goalsFor || 0) - (b.goalsAgainst || 0);
+    if (b.points !== a.points)    return b.points    - a.points;
+    if (bGA      !== aGA)         return bGA         - aGA;
+    if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+    return b.wins - a.wins;
+  });
+  return result;
+}
+
+function renderClasamentGeneral() {
+  const container = document.getElementById('general-clasament-content');
+  const data = calcClasamentGeneral();
+  if (!data.length) {
+    container.innerHTML = emptyState('Nu există date de clasament. Încarcă fișierele CSV.');
+    return;
+  }
+
+  const rows = data.map((s, i) => {
+    const ligaBadge = s.liga === 1
+      ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(79,142,247,0.2);color:var(--accent1);font-weight:700">L1</span>`
+      : `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:rgba(247,161,79,0.2);color:var(--accent2);font-weight:700">L2</span>`;
+    const golaveraj = (s.goalsFor || 0) - (s.goalsAgainst || 0);
+    const gavStr = golaveraj >= 0 ? `+${golaveraj}` : `${golaveraj}`;
+    const gavColor = golaveraj > 0 ? 'var(--success)' : golaveraj < 0 ? 'var(--danger)' : 'var(--text2)';
+    return `
+      <tr>
+        ${rankCell(i)}
+        <td class="left" style="cursor:pointer" onclick="navigateToTeam(${s.liga}, '${s.team.replace(/'/g, "\\'")}')">
+          <div class="cell-with-img">${teamLogoImg(s.team)}<strong>${s.team}</strong></div>
+        </td>
+        <td>${ligaBadge}</td>
+        <td class="left">${ownerCell(s.team, s.owner)}</td>
+        <td>${s.played}</td>
+        <td style="color:var(--success)">${s.wins}</td>
+        <td style="color:var(--warn)">${s.draws}</td>
+        <td style="color:var(--danger)">${s.losses}</td>
+        <td>${s.goalsFor}–${s.goalsAgainst}</td>
+        <td style="color:${gavColor};font-weight:600">${gavStr}</td>
+        <td><strong>${s.points}</strong></td>
+      </tr>`;
+  }).join('');
+
+  const nota = [1, 2].map(liga => {
+    const cls = state.clasament[liga];
+    const ets = Object.keys(cls).map(Number).sort((a, b) => a - b);
+    return ets.length ? `Liga ${liga}: după etapa ${ets[ets.length - 1]}` : null;
+  }).filter(Boolean).join(' · ');
+
+  container.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <h3>🌍 Clasament General — Ambele Ligi</h3>
+        <span class="badge">Combinat</span>
+      </div>
+      <div class="card-body scroll-table">
+        <table>
+          <thead><tr>
+            <th class="left">#</th>
+            <th class="left">Echipă</th>
+            <th>Ligă</th>
+            <th class="left">Manager</th>
+            <th>J</th>
+            <th>V</th>
+            <th>E</th>
+            <th>Î</th>
+            <th>Gol.</th>
+            <th>+/−</th>
+            <th>Pct</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        ${nota ? `<div style="padding:10px 16px;font-size:11px;color:var(--text2);border-top:1px solid var(--border)">📅 Date: ${nota}</div>` : ''}
+      </div>
+    </div>`;
+}
+
 function calculateAll() {
   for (const liga of [1, 2]) {
     const hasData = Object.keys(state.ligaData[liga].etapes).length > 0;
@@ -1471,7 +1759,7 @@ function calculateAll() {
     const accentColor = liga === 1 ? 'var(--accent1)' : 'var(--accent2)';
 
     if (!hasData) {
-      ['golgheter', 'pozitii', 'portari', 'inspiratie', 'rezerve', 'clasament', 'echipe'].forEach(s => {
+      ['golgheter', 'pozitii', 'portari', 'inspiratie', 'rezerve', 'clasament', 'serii', 'echipe'].forEach(s => {
         const el = document.getElementById(`${suffix}-${s}-content`);
         if (el) el.innerHTML = emptyState('Nu există date pentru Liga ' + liga + '.');
       });
@@ -1489,8 +1777,11 @@ function calculateAll() {
     renderInspiratieCoef(liga, calcCoeficientInspiratiei(liga), accentColor);
     renderRezervaDenVis(liga, calcRezervaDenVis(liga), accentColor);
     renderClasamentChart(liga, accentColor);
+    renderSeriiConsecutive(liga, accentColor);
     renderEchipePage(liga, accentColor);
   }
+
+  renderClasamentGeneral();
 
   const has1 = Object.keys(state.ligaData[1].etapes).length > 0;
   const has2 = Object.keys(state.ligaData[2].etapes).length > 0;
@@ -1618,9 +1909,10 @@ function filterGolgheterPos(liga, pos) {
 function renderGolgheterPozitii(liga, accentColor) {
   const container = document.getElementById(`l${liga}-pozitii-content`);
   const positions = [
-    { pos: 'ATACANT', label: 'Atacanți', icon: '⚽' },
-    { pos: 'MIJLOCAS', label: 'Mijlocași', icon: '⚡' },
-    { pos: 'FUNDAS', label: 'Fundași', icon: '🛡' }
+    { pos: 'ATACANT',  label: 'Atacanți',   icon: '⚽' },
+    { pos: 'MIJLOCAS', label: 'Mijlocași',   icon: '⚡' },
+    { pos: 'FUNDAS',   label: 'Fundași',     icon: '🛡' },
+    { pos: 'AUTOGOL',  label: 'Autogoluri',  icon: '🤦' }
   ];
   const currentPos = posFilters[liga];
   const current = positions.find(p => p.pos === currentPos) || positions[0];
@@ -1629,6 +1921,35 @@ function renderGolgheterPozitii(liga, accentColor) {
     <div class="pos-selector">
       ${positions.map(p => `<button class="pos-btn${p.pos === currentPos ? ' active' : ''}" onclick="filterGolgheterPos(${liga}, '${p.pos}')">${p.icon} ${p.label}</button>`).join('')}
     </div>`;
+
+  if (currentPos === 'AUTOGOL') {
+    const agData = calcAutogoluri(liga);
+    let tableHtml;
+    if (!agData.length) {
+      tableHtml = emptyState('Fără autogoluri înregistrate în Liga ' + liga + '.');
+    } else {
+      const rows = agData.map((p, i) => `
+        <tr>
+          ${rankCell(i)}
+          <td class="left">${playerNameCell(p.name, p.position, p.abbrev)}</td>
+          <td class="left">${p.teams.map(t => nebuligaCell(t)).join('<br>')}</td>
+          <td><span class="pts-cell pts-neg" style="font-weight:700">${p.totalAG}</span></td>
+          <td class="avg-cell">${p.appearances}</td>
+        </tr>`).join('');
+      tableHtml = `
+        <div class="card">
+          <div class="card-header"><h3>🤦 Autogoluri — Liga ${liga}</h3><span class="badge">Toate meciurile</span></div>
+          <div class="card-body scroll-table">
+            <table>
+              <thead><tr><th class="left">#</th><th class="left">Jucător</th><th class="left">Nebuliga</th><th>AG</th><th>Etape</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>`;
+    }
+    container.innerHTML = selectorHtml + tableHtml;
+    return;
+  }
 
   const data = calcGolgheterPozitie(liga, currentPos);
   let tableHtml;
@@ -2328,7 +2649,10 @@ function renderClasamentChart(liga, accentColor) {
       <span class="slider-etapa-badge" id="slider-label-l${liga}">Etapa ${sliderState[liga]}</span>
     </div>
     <div class="card">
-      <div class="card-header"><h3 id="standings-title-l${liga}">Clasament — Etapa ${sliderState[liga]}</h3></div>
+      <div class="card-header">
+        <h3 id="standings-title-l${liga}">Clasament — Etapa ${sliderState[liga]}</h3>
+        <button class="btn-extinde-clas" id="btn-extinde-l${liga}" onclick="toggleClasamentExtins(${liga})">Vezi Tot</button>
+      </div>
       <div class="card-body scroll-table" id="standings-table-l${liga}">
         ${renderStandingsForEtapa(clasData, sliderState[liga], liga)}
       </div>
@@ -2380,6 +2704,14 @@ function onSliderChange(liga, val, etapes) {
   document.getElementById(`standings-title-l${liga}`).textContent = `Clasament — Etapa ${nearest}`;
   document.getElementById(`standings-table-l${liga}`).innerHTML =
     renderStandingsForEtapa(state.clasament[liga], nearest, liga);
+}
+
+function toggleClasamentExtins(liga) {
+  const wrap = document.getElementById(`standings-table-l${liga}`);
+  const btn  = document.getElementById(`btn-extinde-l${liga}`);
+  if (!wrap) return;
+  wrap.classList.toggle('clasament-extins');
+  if (btn) btn.textContent = wrap.classList.contains('clasament-extins') ? 'Restrânge' : 'Vezi Tot';
 }
 
 function getStandingsRowClass(pos, liga) {
