@@ -857,8 +857,10 @@ function handleDrop(e) {
 
 function handleFiles(files) {
   const arr = Array.from(files);
-  let tasks = arr.map(f => processFile(f));
-  Promise.all(tasks).then(updateUploadUI);
+  Promise.all(arr.map(f => processFile(f))).then(() => {
+    updateUploadUI();
+    calculateAll();
+  });
 }
 
 function processFileText(filename, text) {
